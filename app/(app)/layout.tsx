@@ -102,6 +102,8 @@ export default async function AppLayout({
               ]}
               requestBadge={requestBadge}
               isAdmin={profile?.is_site_admin ?? false}
+              userId={user.id}
+              displayName={displayName}
             />
           </div>
         </div>

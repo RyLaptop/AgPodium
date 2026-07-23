@@ -8,10 +8,14 @@ export function MobileNav({
   links,
   requestBadge,
   isAdmin,
+  userId,
+  displayName,
 }: {
   links: { href: string; label: string }[];
   requestBadge: number;
   isAdmin: boolean;
+  userId: string;
+  displayName: string;
 }) {
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
@@ -66,7 +70,14 @@ export function MobileNav({
             )}
           </nav>
 
-          <div className="p-4 border-t border-gray-100">
+          <div className="p-4 border-t border-gray-100 space-y-2">
+            <Link
+              href={`/profile/${userId}`}
+              onClick={close}
+              className="block w-full px-4 py-2.5 text-sm text-gray-700 hover:text-brand text-center"
+            >
+              {displayName} · View profile
+            </Link>
             <form action={signOut}>
               <button
                 type="submit"
