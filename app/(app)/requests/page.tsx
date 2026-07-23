@@ -72,16 +72,16 @@ export default async function RequestsPage() {
                       <li key={r.id}>
                         <div className="border border-gray-200 rounded-lg p-3 hover:border-brand">
                           <Link href={`/requests/${r.id}`} className="block">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <p className="font-medium">{meeting.orgs.name} · {meeting.title}</p>
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <p className="font-medium truncate">{meeting.orgs.name} · {meeting.title}</p>
                                 <p className="text-sm text-gray-600 mt-1 line-clamp-1">{r.pitch}</p>
+                                <p className="text-xs text-gray-500 mt-1">
+                                  {new Date(meeting.starts_at).toLocaleString()}
+                                </p>
                               </div>
                               <StatusPill status={r.status} />
                             </div>
-                            <p className="text-xs text-gray-500 mt-1">
-                              {new Date(meeting.starts_at).toLocaleString()}
-                            </p>
                           </Link>
                           {needsFeedback && <FeedbackForm requestId={r.id} />}
                         </div>
@@ -122,9 +122,9 @@ export default async function RequestsPage() {
                     href={`/requests/${r.id}`}
                     className="block border border-gray-200 rounded-lg p-3 hover:border-brand"
                   >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="font-medium truncate">
                           {speakerLabel} → {meeting.orgs.name} · {meeting.title}
                         </p>
                         {speakerSub && (

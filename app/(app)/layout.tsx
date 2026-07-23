@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/auth/actions";
 import { NotificationBell, type Notification } from "./_notification-bell";
 import { UserAvatar } from "@/components/user-avatar";
+import { MobileNav } from "./_mobile-nav";
 
 export default async function AppLayout({
   children,
@@ -55,13 +56,14 @@ export default async function AppLayout({
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="border-b border-gray-200 bg-white">
+      <header className="border-b border-gray-200 bg-white sticky top-0 z-40">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-          <Link href="/dashboard" className="font-bold text-brand text-lg">
+          <Link href="/dashboard" className="font-bold text-brand text-lg shrink-0">
             AgPodium
           </Link>
 
-          <nav className="flex items-center gap-1 text-sm">
+          {/* Desktop nav */}
+          <nav className="hidden md:flex items-center gap-1 text-sm">
             <NavLink href="/dashboard">Dashboard</NavLink>
             <NavLink href="/orgs">Orgs</NavLink>
             <NavLink href="/requests" badge={requestBadge}>Requests</NavLink>
@@ -76,12 +78,12 @@ export default async function AppLayout({
             <NotificationBell initialNotifs={notifications} />
             <Link
               href={`/profile/${user.id}`}
-              className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-brand hidden sm:flex"
+              className="hidden md:flex items-center gap-1.5 text-sm text-gray-600 hover:text-brand"
             >
               <UserAvatar avatarUrl={profile?.avatar_url} name={displayName} size="sm" />
-              {displayName}
+              <span className="hidden lg:inline">{displayName}</span>
             </Link>
-            <form action={signOut}>
+            <form action={signOut} className="hidden md:block">
               <button
                 type="submit"
                 className="text-sm px-3 py-1.5 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 hover:text-brand transition"
@@ -89,11 +91,23 @@ export default async function AppLayout({
                 Sign out
               </button>
             </form>
+            {/* Mobile hamburger */}
+            <MobileNav
+              links={[
+                { href: "/dashboard", label: "Dashboard" },
+                { href: "/orgs", label: "Orgs" },
+                { href: "/requests", label: "Requests" },
+                { href: "/bulletin", label: "Bulletin" },
+                { href: "/calendar", label: "Calendar" },
+              ]}
+              requestBadge={requestBadge}
+              isAdmin={profile?.is_site_admin ?? false}
+            />
           </div>
         </div>
       </header>
 
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-8">
+      <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-6 md:py-8">
         {children}
       </main>
     </div>

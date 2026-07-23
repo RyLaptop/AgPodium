@@ -2,9 +2,9 @@ import Link from "next/link";
 
 export default function HomePage() {
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center p-8">
-      <div className="max-w-xl text-center space-y-6">
-        <h1 className="text-5xl font-bold tracking-tight text-brand">
+    <main className="min-h-screen flex flex-col items-center justify-center p-6">
+      <div className="max-w-xl w-full text-center space-y-6">
+        <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-brand">
           AgPodium
         </h1>
         <p className="text-lg text-gray-700">
