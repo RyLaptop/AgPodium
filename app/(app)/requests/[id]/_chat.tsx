@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { sendChatMessage } from "../actions";
 
 export type ChatMessage = {
   id: string;
@@ -22,11 +24,15 @@ export function Chat({
   currentUserId,
   initialMessages,
   users,
+  hideHeader,
+  className,
 }: {
   requestId: string;
   currentUserId: string;
   initialMessages: ChatMessage[];
   users: ChatUser[];
+  hideHeader?: boolean;
+  className?: string;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
@@ -95,29 +101,19 @@ export function Chat({
     setMessages((prev) => [...prev, optimistic]);
     setDraft("");
 
-    const { data, error: insertError } = await supabase
-      .from("chat_messages")
-      .insert({
-        speak_request_id: requestId,
-        user_id: currentUserId,
-        body,
-      })
-      .select()
-      .single();
+    const res = await sendChatMessage(requestId, body);
 
     setSending(false);
 
-    if (insertError) {
-      // Roll back optimistic message
+    if (!res.ok || !res.data) {
       setMessages((prev) => prev.filter((m) => m.id !== tempId));
       setDraft(body);
-      setError(insertError.message);
+      setError(res.error ?? "Failed to send");
       return;
     }
 
-    // Replace optimistic with real (dedup covered by subscription check too)
     setMessages((prev) =>
-      prev.map((m) => (m.id === tempId ? (data as ChatMessage) : m))
+      prev.map((m) => (m.id === tempId ? (res.data as ChatMessage) : m))
     );
   }, [draft, requestId, currentUserId, supabase]);
 
@@ -129,13 +125,15 @@ export function Chat({
   };
 
   return (
-    <div className="border border-gray-200 rounded-lg overflow-hidden flex flex-col h-[500px]">
-      <div className="px-4 py-2 border-b border-gray-200 bg-gray-50">
-        <h3 className="text-sm font-semibold">Chat</h3>
-        <p className="text-xs text-gray-500">
-          Between the speaker and this meeting&apos;s officers.
-        </p>
-      </div>
+    <div className={`border border-gray-200 rounded-lg overflow-hidden flex flex-col h-[500px] ${className ?? ""}`}>
+      {!hideHeader && (
+        <div className="px-4 py-2 border-b border-gray-200 bg-gray-50">
+          <h3 className="text-sm font-semibold">Chat</h3>
+          <p className="text-xs text-gray-500">
+            Between the speaker and this meeting&apos;s officers.
+          </p>
+        </div>
+      )}
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
         {messages.length === 0 ? (
@@ -157,7 +155,10 @@ export function Chat({
                 }`}
               >
                 <span className="text-xs text-gray-500 mb-0.5">
-                  {senderName} · {formatTime(m.created_at)}
+                  <Link href={`/profile/${m.user_id}`} className="hover:text-brand hover:underline">
+                    {senderName}
+                  </Link>
+                  {" · "}{formatTime(m.created_at)}
                 </span>
                 <div
                   className={`max-w-[75%] px-3 py-2 rounded-lg text-sm whitespace-pre-wrap ${

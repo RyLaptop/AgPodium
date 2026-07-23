@@ -60,21 +60,27 @@ export default async function DashboardPage() {
                 description: string | null;
               };
               return (
-                <li
-                  key={org.id}
-                  className="border border-gray-200 rounded-lg p-4"
-                >
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-semibold">{org.name}</h3>
-                    <span className="text-xs px-2 py-0.5 bg-gray-100 rounded">
-                      {m.role}
-                    </span>
-                  </div>
-                  {org.description && (
-                    <p className="text-sm text-gray-600 mt-1 line-clamp-2">
-                      {org.description}
-                    </p>
-                  )}
+                <li key={org.id}>
+                  <Link
+                    href={`/orgs/${org.slug}`}
+                    className="block border border-gray-200 rounded-lg p-4 hover:border-brand hover:shadow transition"
+                  >
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold">{org.name}</h3>
+                      <span className={`text-xs px-2 py-0.5 rounded font-medium ${
+                        m.role === "director"
+                          ? "bg-maroon-100 text-maroon-700"
+                          : "bg-gray-100 text-gray-600"
+                      }`}>
+                        {m.role === "director" ? "STAFF" : m.role === "officer" ? "Officer" : "Member"}
+                      </span>
+                    </div>
+                    {org.description && (
+                      <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+                        {org.description}
+                      </p>
+                    )}
+                  </Link>
                 </li>
               );
             })}
@@ -101,30 +107,18 @@ export default async function DashboardPage() {
             Track your requests and review incoming
           </p>
         </Link>
-        <PhaseCard
-          title="Bulletin board"
-          desc="Post big campus events"
-          coming="Phase 7"
-        />
+        <Link
+          href="/bulletin"
+          className="border border-gray-200 rounded-lg p-4 hover:border-brand hover:shadow transition"
+        >
+          <h3 className="font-semibold">Bulletin board</h3>
+          <p className="text-sm text-gray-500 mt-1">Post big campus events</p>
+        </Link>
       </section>
+      <p className="text-xs text-gray-400 text-center pt-4 border-t border-gray-100">
+        AgPodium is a student-run platform and is not affiliated with, endorsed by, or associated with Texas A&amp;M University in any way.
+      </p>
     </div>
   );
 }
 
-function PhaseCard({
-  title,
-  desc,
-  coming,
-}: {
-  title: string;
-  desc: string;
-  coming: string;
-}) {
-  return (
-    <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-      <h3 className="font-semibold text-gray-700">{title}</h3>
-      <p className="text-sm text-gray-500 mt-1">{desc}</p>
-      <p className="text-xs text-gray-400 mt-3">{coming}</p>
-    </div>
-  );
-}

@@ -10,27 +10,30 @@ type OrgRow = {
   name: string;
   description: string | null;
   member_count: number;
+  tags: string[];
 };
 
 export default async function OrgsPage() {
   const supabase = await createClient();
 
-  const { data: orgs } = await supabase
-    .from("orgs")
-    .select("id, slug, name, description, org_members(count)")
-    .order("name");
+  const [{ data: orgs }, { data: activeMembers }] = await Promise.all([
+    supabase.from("orgs").select("id, slug, name, description, tags").order("name"),
+    supabase.from("org_members").select("org_id").eq("status", "active"),
+  ]);
 
-  const withCounts: OrgRow[] =
-    orgs?.map((o) => {
-      const members = o.org_members as unknown as { count: number }[];
-      return {
-        id: o.id,
-        slug: o.slug,
-        name: o.name,
-        description: o.description,
-        member_count: members?.[0]?.count ?? 0,
-      };
-    }) ?? [];
+  const countByOrg = new Map<string, number>();
+  for (const m of activeMembers ?? []) {
+    countByOrg.set(m.org_id, (countByOrg.get(m.org_id) ?? 0) + 1);
+  }
+
+  const withCounts: OrgRow[] = (orgs ?? []).map((o) => ({
+    id: o.id,
+    slug: o.slug,
+    name: o.name,
+    description: o.description,
+    tags: (o.tags as unknown as string[]) ?? [],
+    member_count: countByOrg.get(o.id) ?? 0,
+  }));
 
   return (
     <div className="space-y-6">

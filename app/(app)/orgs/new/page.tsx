@@ -1,14 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { createOrg, type CreateOrgResult } from "../actions";
+import { ORG_TAGS, TAG_COLORS, tagLabel } from "../_tag-colors";
 
 export default function NewOrgPage() {
   const [state, action, pending] = useActionState<
     CreateOrgResult | null,
     FormData
   >(createOrg, null);
+  const [tags, setTags] = useState<string[]>([]);
+
+  const toggleTag = (tag: string) =>
+    setTags((prev) => prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]);
 
   return (
     <div className="max-w-lg space-y-6">
@@ -59,6 +64,29 @@ export default function NewOrgPage() {
             className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand"
           />
         </label>
+
+        <div>
+          <p className="text-sm font-medium mb-2">Tags <span className="text-gray-400 font-normal">(optional)</span></p>
+          <div className="flex flex-wrap gap-2">
+            {ORG_TAGS.map((tag) => (
+              <button
+                key={tag}
+                type="button"
+                onClick={() => toggleTag(tag)}
+                className={`text-xs px-2.5 py-1 rounded-full border transition ${
+                  tags.includes(tag)
+                    ? (TAG_COLORS[tag]?.active ?? "bg-brand text-white border-brand")
+                    : (TAG_COLORS[tag]?.border ?? "border-gray-300 text-gray-600 hover:border-brand hover:text-brand")
+                }`}
+              >
+                {tagLabel(tag)}
+              </button>
+            ))}
+          </div>
+          {tags.map((tag) => (
+            <input key={tag} type="hidden" name="tags" value={tag} />
+          ))}
+        </div>
 
         <div className="flex gap-3">
           <button

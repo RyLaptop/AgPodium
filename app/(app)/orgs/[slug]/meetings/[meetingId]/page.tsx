@@ -1,8 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { SpeakRequestForm } from "./_request-form";
 import { OfficerRequestList } from "./_officer-list";
+import { WaitlistButton } from "./_waitlist";
+import { EditMeeting } from "./_edit-meeting";
+import { SpeakerManage } from "./_speaker-manage";
+import { StaffChat } from "./_staff-chat";
+import type { ChatMessage, ChatUser } from "@/app/(app)/requests/[id]/_chat";
 
 export const dynamic = "force-dynamic";
 
@@ -32,29 +38,32 @@ export default async function MeetingPage({
   const { data: myMembership } = user
     ? await supabase
         .from("org_members")
-        .select("role")
+        .select("role, status")
         .eq("org_id", meeting.org_id)
         .eq("user_id", user.id)
+        .eq("status", "active")
         .maybeSingle()
     : { data: null };
 
   const isOfficer =
     myMembership?.role === "officer" || myMembership?.role === "director";
 
+  const svc = createServiceClient();
   const [{ data: approvedSpeakers }, { data: incoming }, { data: myOrgs }] =
     await Promise.all([
-      supabase
+      svc
         .from("speak_requests")
         .select(
-          "id, pitch, requested_minutes, status, users(full_name, email), orgs(name, slug)"
+          "id, pitch, requested_minutes, status, speaker_order, requester_user_id, users!speak_requests_requester_user_id_fkey(full_name, email), orgs!speak_requests_requester_org_id_fkey(name, slug)"
         )
         .eq("meeting_id", meetingId)
-        .in("status", ["approved", "completed"]),
+        .in("status", ["approved", "completed"])
+        .order("speaker_order", { ascending: true, nullsFirst: false }),
       isOfficer
         ? supabase
             .from("speak_requests")
             .select(
-              "id, pitch, requested_minutes, status, created_at, users(full_name, email), orgs(name, slug)"
+              "id, pitch, requested_minutes, status, created_at, users!speak_requests_requester_user_id_fkey(full_name, email), orgs!speak_requests_requester_org_id_fkey(name, slug)"
             )
             .eq("meeting_id", meetingId)
             .eq("status", "pending")
@@ -65,6 +74,8 @@ export default async function MeetingPage({
             .from("org_members")
             .select("orgs(id, name)")
             .eq("user_id", user.id)
+            .eq("status", "active")
+            .in("role", ["officer", "director"])
         : Promise.resolve({ data: [] }),
     ]);
 
@@ -72,7 +83,6 @@ export default async function MeetingPage({
   const slotsRemaining = Math.max(0, meeting.slots_open - usedSlots);
   const inFuture = new Date(meeting.starts_at) > new Date();
 
-  // Has the current user already requested this meeting?
   const { data: myExistingRequest } = user
     ? await supabase
         .from("speak_requests")
@@ -83,6 +93,74 @@ export default async function MeetingPage({
         .maybeSingle()
     : { data: null };
 
+  // Waitlist: stored as speak_requests with status="waitlisted"
+  const [{ data: waitlistRows }, { data: myWaitlistRequest }] = await Promise.all([
+    svc.from("speak_requests").select("id").eq("meeting_id", meetingId).eq("status", "waitlisted"),
+    user
+      ? supabase
+          .from("speak_requests")
+          .select("id")
+          .eq("meeting_id", meetingId)
+          .eq("requester_user_id", user.id)
+          .eq("status", "waitlisted")
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
+
+  const waitlistCount = waitlistRows?.length ?? 0;
+  const onWaitlist = !!myWaitlistRequest;
+
+  // Officer chat: fetch messages + participants for all approved speakers
+  let staffChatSpeakers: { requestId: string; label: string; sublabel?: string }[] = [];
+  let staffChatMessages: Record<string, ChatMessage[]> = {};
+  let staffChatUsers: ChatUser[] = [];
+
+  if (isOfficer && user && (approvedSpeakers?.length ?? 0) > 0) {
+    const requestIds = (approvedSpeakers ?? []).map((s) => s.id);
+    const [{ data: chatRows }, { data: officerMemberRows }] = await Promise.all([
+      svc
+        .from("chat_messages")
+        .select("id, speak_request_id, user_id, body, created_at")
+        .in("speak_request_id", requestIds)
+        .order("created_at", { ascending: true }),
+      svc
+        .from("org_members")
+        .select("users(id, full_name, email)")
+        .eq("org_id", meeting.org_id)
+        .in("role", ["officer", "director"])
+        .eq("status", "active"),
+    ]);
+
+    // Group messages by request
+    for (const row of chatRows ?? []) {
+      const rid = (row as { speak_request_id: string }).speak_request_id;
+      if (!staffChatMessages[rid]) staffChatMessages[rid] = [];
+      staffChatMessages[rid].push(row as unknown as ChatMessage);
+    }
+
+    // Build deduplicated user list
+    const seen = new Set<string>();
+    for (const row of officerMemberRows ?? []) {
+      const u = row.users as unknown as ChatUser | null;
+      if (u && !seen.has(u.id)) { staffChatUsers.push(u); seen.add(u.id); }
+    }
+    for (const s of approvedSpeakers ?? []) {
+      const u = s.users as unknown as ChatUser;
+      if (u && !seen.has(u.id)) { staffChatUsers.push(u); seen.add(u.id); }
+    }
+
+    // Build tabs from approved speakers (already sorted by speaker_order)
+    staffChatSpeakers = (approvedSpeakers ?? []).map((s) => {
+      const su = s.users as unknown as { full_name: string | null; email: string };
+      const so = s.orgs as unknown as { name: string } | null;
+      return {
+        requestId: s.id,
+        label: so ? so.name : (su.full_name ?? su.email.split("@")[0]),
+        sublabel: so ? (su.full_name ?? su.email.split("@")[0]) : undefined,
+      };
+    });
+  }
+
   return (
     <div className="space-y-8">
       <div>
@@ -92,7 +170,24 @@ export default async function MeetingPage({
         >
           ← {org.name}
         </Link>
-        <h1 className="text-3xl font-bold mt-2">{meeting.title}</h1>
+        <div className="mt-2 flex items-start justify-between gap-4">
+          <h1 className="text-3xl font-bold">{meeting.title}</h1>
+          {isOfficer && (
+            <div className="shrink-0">
+              <EditMeeting
+                meetingId={meetingId}
+                orgSlug={slug}
+                title={meeting.title}
+                startsAt={meeting.starts_at}
+                endsAt={meeting.ends_at ?? null}
+                location={meeting.location ?? null}
+                agenda={meeting.agenda ?? null}
+                slotsOpen={meeting.slots_open}
+                slotLength={meeting.slot_length_minutes}
+              />
+            </div>
+          )}
+        </div>
         <div className="mt-2 text-gray-700 space-y-1 text-sm">
           <div>
             <strong>When:</strong> {new Date(meeting.starts_at).toLocaleString()}
@@ -117,46 +212,14 @@ export default async function MeetingPage({
       </div>
 
       <section>
-        <h2 className="text-xl font-semibold mb-3">Approved speakers</h2>
-        {!approvedSpeakers || approvedSpeakers.length === 0 ? (
-          <p className="text-gray-500 text-sm">None yet.</p>
-        ) : (
-          <ul className="space-y-2">
-            {approvedSpeakers.map((s) => {
-              const speaker = s.users as unknown as {
-                full_name: string | null;
-                email: string;
-              };
-              const speakerOrg = s.orgs as unknown as {
-                name: string;
-              } | null;
-              return (
-                <li
-                  key={s.id}
-                  className="border border-gray-200 rounded-lg p-3"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">
-                        {speaker.full_name ?? speaker.email.split("@")[0]}
-                        {speakerOrg && (
-                          <span className="text-gray-500 font-normal">
-                            {" "}
-                            · {speakerOrg.name}
-                          </span>
-                        )}
-                      </p>
-                      <p className="text-sm text-gray-600 mt-1">{s.pitch}</p>
-                    </div>
-                    <span className="text-xs text-gray-500 shrink-0 ml-3">
-                      {s.requested_minutes} min · {s.status}
-                    </span>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
+        <h2 className="text-xl font-semibold mb-3">Speaker lineup</h2>
+        <SpeakerManage
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          speakers={(approvedSpeakers ?? []) as any}
+          isOfficer={isOfficer}
+          meetingId={meetingId}
+          orgSlug={slug}
+        />
       </section>
 
       {isOfficer && (
@@ -173,18 +236,26 @@ export default async function MeetingPage({
         </section>
       )}
 
+      {isOfficer && user && staffChatSpeakers.length > 0 && (
+        <section>
+          <h2 className="text-xl font-semibold mb-3">Chat with speakers</h2>
+          <StaffChat
+            speakers={staffChatSpeakers}
+            initialMessagesByRequest={staffChatMessages}
+            users={staffChatUsers}
+            currentUserId={user.id}
+          />
+        </section>
+      )}
+
       {user && !isOfficer && inFuture && slotsRemaining > 0 && (
         <section>
           <h2 className="text-xl font-semibold mb-3">Request a speaking slot</h2>
           {myExistingRequest ? (
             <div className="border border-gray-200 rounded-lg p-4 text-sm">
               You already have a{" "}
-              <strong>{myExistingRequest.status}</strong> request for this
-              meeting.{" "}
-              <Link
-                href={`/requests/${myExistingRequest.id}`}
-                className="text-brand hover:underline"
-              >
+              <strong>{myExistingRequest.status}</strong> request for this meeting.{" "}
+              <Link href={`/requests/${myExistingRequest.id}`} className="text-brand hover:underline">
                 View request →
               </Link>
             </div>
@@ -194,19 +265,35 @@ export default async function MeetingPage({
               orgSlug={slug}
               maxMinutes={meeting.slot_length_minutes}
               myOrgs={
-                (myOrgs?.map((m) => m.orgs as unknown as { id: string; name: string }) ??
-                  []).filter((o) => o?.id !== meeting.org_id)
+                (myOrgs?.map((m) => m.orgs as unknown as { id: string; name: string }) ?? []).filter(
+                  (o) => o?.id !== meeting.org_id
+                )
               }
             />
           )}
         </section>
       )}
 
+      {user && !isOfficer && inFuture && (slotsRemaining === 0 || onWaitlist) && !myExistingRequest && (
+        <section>
+          <h2 className="text-xl font-semibold mb-3">Waitlist</h2>
+          <WaitlistButton
+            meetingId={meetingId}
+            orgSlug={slug}
+            onWaitlist={onWaitlist}
+            waitlistCount={waitlistCount}
+            maxMinutes={meeting.slot_length_minutes}
+            myOrgs={
+              (myOrgs?.map((m) => m.orgs as unknown as { id: string; name: string }) ?? []).filter(
+                (o) => o?.id !== meeting.org_id
+              )
+            }
+          />
+        </section>
+      )}
+
       {!inFuture && (
         <p className="text-sm text-gray-500">This meeting is in the past.</p>
-      )}
-      {inFuture && slotsRemaining === 0 && !isOfficer && (
-        <p className="text-sm text-gray-500">No speaker slots remaining.</p>
       )}
     </div>
   );

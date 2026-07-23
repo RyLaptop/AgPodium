@@ -21,10 +21,10 @@ export default async function RequestDetailPage({
     .from("speak_requests")
     .select(
       `id, pitch, status, requested_minutes, created_at, decided_at,
-       requester_user_id,
+       requester_user_id, requester_read_at,
        meeting_id,
-       users(full_name, email),
-       orgs(name, slug),
+       users!speak_requests_requester_user_id_fkey(full_name, email),
+       orgs!speak_requests_requester_org_id_fkey(name, slug),
        meetings(id, title, starts_at, location, org_id, orgs(name, slug))`
     )
     .eq("id", id)
@@ -48,6 +48,24 @@ export default async function RequestDetailPage({
 
   const isRequester = user?.id === req.requester_user_id;
 
+  // Mark as read when the requester opens a decided request for the first time.
+  if (isRequester && (req.status === "approved" || req.status === "denied") && !req.requester_read_at) {
+    await supabase
+      .from("speak_requests")
+      .update({ requester_read_at: new Date().toISOString() })
+      .eq("id", id);
+  }
+
+  const { data: requesterOrgRows } = await supabase
+    .from("org_members")
+    .select("orgs(name, slug)")
+    .eq("user_id", req.requester_user_id)
+    .eq("status", "active");
+
+  const requesterOrgs = (requesterOrgRows ?? [])
+    .map((r) => r.orgs as unknown as { name: string; slug: string } | null)
+    .filter(Boolean) as { name: string; slug: string }[];
+
   const { data: myMembership } = user
     ? await supabase
         .from("org_members")
@@ -61,9 +79,10 @@ export default async function RequestDetailPage({
     myMembership?.role === "officer" || myMembership?.role === "director";
 
   const meetingInPast = new Date(meeting.starts_at) < new Date();
+  const meetingPastOneDay = new Date(meeting.starts_at).getTime() + 24 * 60 * 60 * 1000 < Date.now();
 
   // Load chat (only if the caller can access it — RLS enforces)
-  const canChat = user && (isRequester || isOfficer);
+  const canChat = user && (isRequester || isOfficer) && (req.status === "approved" || req.status === "completed");
   const [{ data: chatRows }, { data: officerRows }] = canChat
     ? await Promise.all([
         supabase
@@ -111,15 +130,19 @@ export default async function RequestDetailPage({
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm text-gray-500">Speaker</p>
-            <p className="font-medium">
-              {speaker.full_name ?? speaker.email.split("@")[0]}
-              {speakerOrg && (
-                <span className="text-gray-500 font-normal">
-                  {" "}
-                  · {speakerOrg.name}
-                </span>
-              )}
-            </p>
+            <Link href={`/profile/${req.requester_user_id}`} className="font-medium hover:text-brand hover:underline">
+              {speakerOrg ? speakerOrg.name : (speaker.full_name ?? speaker.email.split("@")[0])}
+            </Link>
+            {speakerOrg && (
+              <Link href={`/profile/${req.requester_user_id}`} className="text-sm text-gray-500 hover:text-brand hover:underline block">
+                {speaker.full_name ?? speaker.email.split("@")[0]}
+              </Link>
+            )}
+            {requesterOrgs.length > 0 && (
+              <p className="text-xs text-gray-400 mt-0.5">
+                {requesterOrgs.map((o) => o.name).join(" · ")}
+              </p>
+            )}
           </div>
           <StatusPill status={req.status} />
         </div>
@@ -155,6 +178,7 @@ export default async function RequestDetailPage({
         isRequester={isRequester}
         isOfficer={isOfficer}
         meetingInPast={meetingInPast}
+        meetingPastOneDay={meetingPastOneDay}
       />
 
       {canChat && user && (
@@ -179,6 +203,7 @@ function StatusPill({ status }: { status: string }) {
     completed: "bg-blue-100 text-blue-800",
     no_show: "bg-gray-200 text-gray-700",
     cancelled: "bg-gray-100 text-gray-500",
+    disputed: "bg-orange-100 text-orange-800",
   };
   return (
     <span

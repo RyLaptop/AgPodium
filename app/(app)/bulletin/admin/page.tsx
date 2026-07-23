@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { ReviewQueue } from "./_review-queue";
 
 export const dynamic = "force-dynamic";
@@ -32,10 +33,11 @@ export default async function BulletinAdminPage() {
     );
   }
 
-  const { data: pending } = await supabase
+  const admin = createServiceClient();
+  const { data: pending } = await admin
     .from("bulletin_posts")
     .select(
-      "id, event_title, event_description, event_at, event_location, created_at, users(full_name, email), orgs(name)"
+      "id, event_title, event_description, event_at, event_location, created_at, users!bulletin_posts_submitter_id_fkey(full_name, email), orgs(name)"
     )
     .eq("status", "pending")
     .order("created_at", { ascending: true });

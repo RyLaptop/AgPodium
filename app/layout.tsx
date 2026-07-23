@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "YellPass",
+  title: "AgPodium",
   description:
     "Cross-org campus platform for meeting speakers, event calendars, and bulletin boards.",
 };

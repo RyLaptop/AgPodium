@@ -25,7 +25,7 @@ export function reminderEmail({
     "<strong>${meetingTitle}</strong>" ${label}.</p>
     <p><strong>When:</strong> ${when}<br/>
     <strong>Where:</strong> ${location ?? "TBD"}</p>
-    <p>— YellPass</p>
+    <p>— AgPodium</p>
   `;
   return { subject, html };
 }

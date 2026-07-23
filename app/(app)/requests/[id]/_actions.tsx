@@ -3,10 +3,14 @@
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
+  cancelApproved,
   cancelRequest,
+  clearRequest,
   decideRequest,
   markCompleted,
   markNoShow,
+  reportGhost,
+  selfConfirm,
 } from "../actions";
 
 export function RequestActions({
@@ -15,12 +19,14 @@ export function RequestActions({
   isRequester,
   isOfficer,
   meetingInPast,
+  meetingPastOneDay,
 }: {
   requestId: string;
   status: string;
   isRequester: boolean;
   isOfficer: boolean;
   meetingInPast: boolean;
+  meetingPastOneDay: boolean;
 }) {
   const [pending, startTransition] = useTransition();
   const router = useRouter();
@@ -45,20 +51,58 @@ export function RequestActions({
       </Btn>
     );
   }
-  if (isOfficer && status === "approved" && meetingInPast) {
+
+  if (isOfficer && status === "approved") {
     buttons.push(
       <Btn key="c" onClick={() => run(() => markCompleted(requestId))} primary disabled={pending}>
         Mark completed
       </Btn>,
-      <Btn key="n" onClick={() => run(() => markNoShow(requestId))} disabled={pending}>
-        No-show
+      <Btn key="ca" onClick={() => run(() => cancelApproved(requestId))} disabled={pending}>
+        Cancel approved request
       </Btn>
     );
+    if (meetingInPast) {
+      buttons.push(
+        <Btn key="n" onClick={() => run(() => markNoShow(requestId))} disabled={pending}>
+          No-show
+        </Btn>
+      );
+    }
   }
+
   if (isRequester && status === "pending") {
     buttons.push(
       <Btn key="x" onClick={() => run(() => cancelRequest(requestId))} disabled={pending}>
         Cancel my request
+      </Btn>
+    );
+  }
+
+  if (isRequester && status === "approved" && meetingPastOneDay) {
+    buttons.push(
+      <Btn key="sc" onClick={() => run(() => selfConfirm(requestId))} primary disabled={pending}>
+        Confirm I spoke
+      </Btn>,
+      <Btn key="rg" onClick={() => run(() => reportGhost(requestId))} disabled={pending}>
+        Org never confirmed
+      </Btn>
+    );
+  }
+
+  if (isRequester && status === "denied") {
+    buttons.push(
+      <Btn
+        key="clr"
+        onClick={() => {
+          startTransition(async () => {
+            const res = await clearRequest(requestId);
+            if (!res.ok && res.error) alert(res.error);
+            else router.push("/requests");
+          });
+        }}
+        disabled={pending}
+      >
+        Clear from my requests
       </Btn>
     );
   }

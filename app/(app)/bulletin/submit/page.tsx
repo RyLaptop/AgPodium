@@ -14,7 +14,9 @@ export default async function SubmitBulletinPage() {
   const { data: memberships } = await supabase
     .from("org_members")
     .select("orgs(id, name)")
-    .eq("user_id", user.id);
+    .eq("user_id", user.id)
+    .eq("status", "active")
+    .in("role", ["officer", "director"]);
 
   const myOrgs =
     memberships?.map((m) => m.orgs as unknown as { id: string; name: string }) ?? [];

@@ -5,7 +5,7 @@ export default function HomePage() {
     <main className="min-h-screen flex flex-col items-center justify-center p-8">
       <div className="max-w-xl text-center space-y-6">
         <h1 className="text-5xl font-bold tracking-tight text-brand">
-          YellPass
+          AgPodium
         </h1>
         <p className="text-lg text-gray-700">
           Speak at any org&apos;s meeting without the email chain. Post events
@@ -16,10 +16,10 @@ export default function HomePage() {
             href="/login"
             className="px-6 py-3 bg-brand text-white rounded-lg hover:bg-brand-dark transition"
           >
-            Sign in with TAMU email
+            Sign in
           </Link>
         </div>
-        <p className="text-sm text-gray-500">Pilot at Texas A&amp;M.</p>
+        <p className="text-sm text-gray-500">Now open to everyone.</p>
       </div>
     </main>
   );
