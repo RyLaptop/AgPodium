@@ -7,15 +7,6 @@ export const dynamic = "force-dynamic";
 export default async function CalendarPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return (
-    <div className="max-w-2xl space-y-6">
-      <h1 className="text-3xl font-bold">Calendar</h1>
-      <p className="text-gray-500 text-sm">
-        You have to join an organization to see their meetings on the calendar.
-      </p>
-    </div>
-  );
-
   const from = new Date();
   from.setMonth(from.getMonth() - 1);
   from.setDate(1);
@@ -25,11 +16,13 @@ export default async function CalendarPage() {
   const svc = createServiceClient();
 
   const [{ data: memberships }, { data: bulletinPosts }] = await Promise.all([
-    supabase
-      .from("org_members")
-      .select("org_id")
-      .eq("user_id", user.id)
-      .eq("status", "active"),
+    user
+      ? supabase
+          .from("org_members")
+          .select("org_id")
+          .eq("user_id", user.id)
+          .eq("status", "active")
+      : Promise.resolve({ data: [] }),
     svc
       .from("bulletin_posts")
       .select("event_title, event_at")
