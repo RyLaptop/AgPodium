@@ -57,7 +57,7 @@ export function BulletinCarousel({ posts }: { posts: Post[] }) {
       {posts.length > 1 && (
         <div className="absolute bottom-3 left-0 right-0 flex items-center justify-center gap-3">
           <button onClick={prev} aria-label="Previous"
-            className="w-8 h-8 flex items-center justify-center text-2xl text-gray-400 hover:text-brand transition leading-none">
+            className="w-12 h-12 flex items-center justify-center text-4xl text-gray-400 hover:text-brand transition leading-none">
             ‹
           </button>
           <div className="flex gap-2 items-center">
@@ -71,7 +71,7 @@ export function BulletinCarousel({ posts }: { posts: Post[] }) {
             ))}
           </div>
           <button onClick={next} aria-label="Next"
-            className="w-8 h-8 flex items-center justify-center text-2xl text-gray-400 hover:text-brand transition leading-none">
+            className="w-12 h-12 flex items-center justify-center text-4xl text-gray-400 hover:text-brand transition leading-none">
             ›
           </button>
         </div>
