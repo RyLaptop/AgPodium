@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { ClearBulletinPost } from "./_clear-post";
 import { PostActions } from "./_post-actions";
+import { AuthGatedLink } from "@/app/(app)/_auth-gate";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +25,7 @@ export default async function BulletinPage({
 }) {
   const { submitted } = await searchParams;
   const supabase = await createClient();
+  const svc = createServiceClient();
 
   const {
     data: { user },
@@ -30,7 +33,7 @@ export default async function BulletinPage({
 
   const [{ data: posts }, { data: profile }, { data: myPosts }, { data: staffMemberships }] =
     await Promise.all([
-      supabase
+      svc
         .from("bulletin_posts")
         .select("id, submitter_id, org_id, event_title, event_description, event_at, event_location, orgs(name, slug)")
         .eq("status", "approved")
@@ -88,12 +91,12 @@ export default async function BulletinPage({
               Review queue
             </Link>
           )}
-          <Link
+          <AuthGatedLink
             href="/bulletin/submit"
             className="px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand-dark text-sm"
           >
             + Submit event
-          </Link>
+          </AuthGatedLink>
         </div>
       </div>
 
