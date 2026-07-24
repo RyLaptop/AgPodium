@@ -10,6 +10,7 @@ import { PendingMembers } from "./_pending-members";
 import { ActiveMembers } from "./_active-members";
 import { EditOrgForm } from "./_edit-org";
 import { Affiliations } from "./_affiliations";
+import { CohostInvites } from "./_cohost-invites";
 import { AuthGatedLink } from "@/app/(app)/_auth-gate";
 
 export const dynamic = "force-dynamic";
@@ -45,7 +46,7 @@ export default async function OrgProfilePage({
     notFound();
   }
 
-  const [{ data: members }, { data: meetings }, { data: existingInvite }, { data: affiliatedRows }, { data: allOrgs }] =
+  const [{ data: members }, { data: meetings }, { data: existingInvite }, { data: affiliatedRows }, { data: allOrgs }, { data: cohostInviteRows }] =
     await Promise.all([
       svc.from("org_members").select("role, status, title, users(id, full_name, email)").eq("org_id", org.id),
       supabase.from("meetings")
@@ -61,6 +62,10 @@ export default async function OrgProfilePage({
         .or(`org_id.eq.${org.id},affiliate_org_id.eq.${org.id}`)
         .neq("status", "declined"),
       svc.from("orgs").select("id, slug, name").eq("status", "approved").order("name"),
+      svc.from("meeting_cohosts")
+        .select("id, meeting_id, meetings(id, title, starts_at, orgs(name, slug))")
+        .eq("org_id", org.id)
+        .eq("status", "pending"),
     ]);
 
   const meetingIds = (meetings ?? []).map((m) => m.id);
@@ -128,6 +133,29 @@ export default async function OrgProfilePage({
   });
 
   const allOrgsList = (allOrgs ?? []).filter((o) => o.id !== org.id).map((o) => ({ id: o.id, slug: o.slug, name: o.name }));
+
+  type CohostInvite = {
+    id: string;
+    meetingId: string;
+    meetingTitle: string;
+    startsAt: string;
+    hostOrg: { name: string; slug: string };
+  };
+
+  const cohostInvites: CohostInvite[] = (cohostInviteRows ?? []).map((r) => {
+    const row = r as unknown as {
+      id: string;
+      meeting_id: string;
+      meetings: { id: string; title: string; starts_at: string; orgs: { name: string; slug: string } };
+    };
+    return {
+      id: row.id,
+      meetingId: row.meeting_id,
+      meetingTitle: row.meetings.title,
+      startsAt: row.meetings.starts_at,
+      hostOrg: row.meetings.orgs,
+    };
+  });
 
   return (
     <div className="space-y-8">
@@ -216,6 +244,10 @@ export default async function OrgProfilePage({
         allOrgs={allOrgsList}
         isDirector={isDirector || (myMembership?.role === "officer" && myMembership?.status === "active")}
       />
+
+      {canManage && cohostInvites.length > 0 && (
+        <CohostInvites invites={cohostInvites} orgSlug={org.slug} />
+      )}
 
       {pendingForDirector.length > 0 && (
         <PendingMembers orgId={org.id} members={pendingForDirector} />
