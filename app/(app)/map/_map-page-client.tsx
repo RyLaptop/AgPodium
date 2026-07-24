@@ -1,0 +1,168 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { createBrowserClient } from "@supabase/ssr";
+import { MapWrapper } from "./_map-wrapper";
+
+type MapMeeting = {
+  id: string;
+  title: string;
+  org_name: string;
+  org_slug: string;
+  location: string | null;
+  starts_at: string;
+  lat: number | null;
+  lng: number | null;
+};
+
+export function MapPageClient() {
+  const [meetings, setMeetings] = useState<MapMeeting[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+
+    async function load() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) { setLoading(false); return; }
+
+        const [{ data: memberships }, { data: myRequests }] = await Promise.all([
+          supabase.from("org_members").select("org_id").eq("user_id", user.id).eq("status", "active"),
+          supabase.from("speak_requests").select("meeting_id").eq("requester_user_id", user.id).eq("status", "approved"),
+        ]);
+
+        const orgIds = (memberships ?? []).map((m) => m.org_id as string);
+        const speakingMeetingIds = (myRequests ?? []).map((r) => r.meeting_id as string);
+
+        const queries: Promise<{ data: unknown[] | null }>[] = [];
+        const now = new Date().toISOString();
+
+        if (orgIds.length > 0) {
+          queries.push(
+            supabase.from("meetings")
+              .select("id, title, location, starts_at, org_id, orgs(name, slug)")
+              .in("org_id", orgIds)
+              .gte("starts_at", now)
+              .order("starts_at", { ascending: true })
+              .limit(50) as unknown as Promise<{ data: unknown[] | null }>
+          );
+        }
+
+        if (speakingMeetingIds.length > 0) {
+          queries.push(
+            supabase.from("meetings")
+              .select("id, title, location, starts_at, org_id, orgs(name, slug)")
+              .in("id", speakingMeetingIds)
+              .gte("starts_at", now)
+              .order("starts_at", { ascending: true })
+              .limit(50) as unknown as Promise<{ data: unknown[] | null }>
+          );
+        }
+
+        const results = queries.length > 0 ? await Promise.all(queries) : [];
+        const allRows = results.flatMap((r) => (r.data ?? []) as Record<string, unknown>[]);
+
+        const seen = new Set<string>();
+        const out: MapMeeting[] = [];
+        for (const row of allRows) {
+          const id = row.id as string;
+          if (seen.has(id)) continue;
+          seen.add(id);
+          const org = row.orgs as { name: string; slug: string } | null;
+          out.push({
+            id,
+            title: row.title as string,
+            org_name: org?.name ?? "",
+            org_slug: org?.slug ?? "",
+            location: (row.location as string | null) ?? null,
+            starts_at: row.starts_at as string,
+            lat: null,
+            lng: null,
+          });
+        }
+
+        setMeetings(out);
+      } catch (err) {
+        console.error("[map]", err);
+        setError("Could not load map data.");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    load();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <div>
+          <h1 className="text-3xl font-bold">Campus map</h1>
+          <p className="text-gray-600 mt-1 text-sm">Upcoming meetings for orgs you&apos;re in or speaking at.</p>
+        </div>
+        <div className="w-full rounded-xl bg-gray-100 animate-pulse" style={{ height: 420 }} />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-4">
+        <h1 className="text-3xl font-bold">Campus map</h1>
+        <div className="border border-red-200 bg-red-50 rounded-xl p-6 text-center text-red-700 text-sm">{error}</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h1 className="text-3xl font-bold">Campus map</h1>
+        <p className="text-gray-600 mt-1 text-sm">Upcoming meetings for orgs you&apos;re in or speaking at.</p>
+      </div>
+
+      {meetings.length === 0 ? (
+        <div className="border border-dashed border-gray-300 rounded-xl p-8 text-center text-gray-500">
+          <p>No upcoming meetings. <Link href="/orgs" className="text-brand hover:underline">Browse orgs</Link> to join some.</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <div className="w-full rounded-xl overflow-hidden border border-gray-200" style={{ height: 420 }}>
+            <MapWrapper meetings={meetings} />
+          </div>
+          <div className="grid sm:grid-cols-2 gap-3">
+            {meetings.map((m) => (
+              <Link
+                key={m.id}
+                href={`/orgs/${m.org_slug}/meetings/${m.id}`}
+                className="border border-gray-200 rounded-lg p-3 hover:border-brand transition"
+              >
+                <p className="font-medium text-sm truncate">{m.org_name} · {m.title}</p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {new Date(m.starts_at).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                </p>
+                {m.location && (
+                  <a
+                    href={`https://maps.google.com/?q=${encodeURIComponent(m.location + " Texas A&M University")}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="text-xs text-brand hover:underline mt-0.5 block"
+                  >
+                    📍 {m.location}
+                  </a>
+                )}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
