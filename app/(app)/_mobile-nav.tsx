@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { signOut } from "@/app/auth/actions";
+import { useAuthGate } from "./_auth-gate";
 
 export function MobileNav({
   links,
@@ -11,7 +12,7 @@ export function MobileNav({
   userId,
   displayName,
 }: {
-  links: { href: string; label: string }[];
+  links: { href: string; label: string; requiresAuth?: boolean }[];
   requestBadge: number;
   isAdmin: boolean;
   userId: string | null;
@@ -19,6 +20,7 @@ export function MobileNav({
 }) {
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
+  const { isAuthed, open: openAuthGate } = useAuthGate();
 
   return (
     <>
@@ -46,19 +48,32 @@ export function MobileNav({
           </div>
 
           <nav className="flex-1 flex flex-col p-4 gap-1 text-base overflow-y-auto">
-            {links.map(({ href, label }) => (
-              <Link
-                key={href}
-                href={href}
-                onClick={close}
-                className="relative flex items-center gap-2 px-3 py-3 rounded-lg text-gray-700 hover:bg-gray-50 hover:text-brand"
-              >
-                {label}
-                {label === "Requests" && requestBadge > 0 && (
-                  <span className="w-2 h-2 bg-red-500 rounded-full" />
-                )}
-              </Link>
-            ))}
+            {links.map(({ href, label, requiresAuth }) => {
+              const showDot = label === "Requests" && requestBadge > 0;
+              if (requiresAuth && !isAuthed) {
+                return (
+                  <button
+                    key={href}
+                    onClick={() => { close(); openAuthGate(); }}
+                    className="relative flex items-center gap-2 px-3 py-3 rounded-lg text-gray-700 hover:bg-gray-50 hover:text-brand text-left"
+                  >
+                    {label}
+                    {showDot && <span className="w-2 h-2 bg-red-500 rounded-full" />}
+                  </button>
+                );
+              }
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  onClick={close}
+                  className="relative flex items-center gap-2 px-3 py-3 rounded-lg text-gray-700 hover:bg-gray-50 hover:text-brand"
+                >
+                  {label}
+                  {showDot && <span className="w-2 h-2 bg-red-500 rounded-full" />}
+                </Link>
+              );
+            })}
             {isAdmin && (
               <Link
                 href="/bulletin/admin"

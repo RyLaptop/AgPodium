@@ -56,8 +56,8 @@ export default async function AppLayout({
   const navLinks = [
     { href: "/dashboard", label: "Dashboard" },
     { href: "/orgs", label: "Orgs" },
-    { href: "/requests", label: "Requests" },
-    { href: "/messages", label: "Messages" },
+    { href: "/requests", label: "Requests", requiresAuth: true },
+    { href: "/messages", label: "Messages", requiresAuth: true },
     { href: "/map", label: "Map" },
     { href: "/bulletin", label: "Bulletin" },
     { href: "/calendar", label: "Calendar" },
@@ -75,7 +75,7 @@ export default async function AppLayout({
             {/* Desktop nav */}
             <nav className="hidden md:flex items-center gap-1 text-sm">
               {navLinks.map((l) => (
-                <NavLink key={l.href} href={l.href} badge={l.href === "/requests" ? requestBadge : undefined}>
+                <NavLink key={l.href} href={l.href} badge={l.href === "/requests" ? requestBadge : undefined} requiresAuth={l.requiresAuth}>
                   {l.label}
                 </NavLink>
               ))}

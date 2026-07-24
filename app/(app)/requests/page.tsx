@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
 import { FeedbackForm } from "./_feedback";
 
 export const dynamic = "force-dynamic";
@@ -10,7 +9,16 @@ export default async function RequestsPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  if (!user) return (
+    <div className="flex flex-col items-center justify-center py-24 text-center text-gray-500 gap-3">
+      <p className="text-lg font-medium text-gray-700">Sign in to view your requests</p>
+      <p className="text-sm">To access this feature you must be signed in.</p>
+      <div className="flex gap-3 mt-2">
+        <Link href="/login" className="px-4 py-2 bg-brand text-white rounded-lg text-sm hover:bg-brand-dark transition">Sign in</Link>
+        <Link href="/signup" className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition">Create account</Link>
+      </div>
+    </div>
+  );
 
   const [{ data: mine }, { data: incoming }] = await Promise.all([
     supabase
