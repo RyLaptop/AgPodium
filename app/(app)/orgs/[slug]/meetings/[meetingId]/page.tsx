@@ -24,7 +24,9 @@ export default async function MeetingPage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { data: meeting } = await supabase
+  const svc = createServiceClient();
+
+  const { data: meeting } = await svc
     .from("meetings")
     .select(
       "id, title, agenda, location, starts_at, ends_at, slots_open, slot_length_minutes, org_id, cancelled_at, orgs(name, slug)"
@@ -48,8 +50,6 @@ export default async function MeetingPage({
 
   const isOfficer =
     myMembership?.role === "officer" || myMembership?.role === "director";
-
-  const svc = createServiceClient();
   const isCancelled = !!(meeting as unknown as { cancelled_at: string | null }).cancelled_at;
 
   const [{ data: approvedSpeakers }, { data: incoming }, { data: myOrgs }, { data: cohostRows }, { data: allOrgs }] =
