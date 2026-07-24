@@ -332,6 +332,28 @@ export async function inviteCohost(meetingId: string, orgSlug: string, cohostOrg
   return { ok: true as const };
 }
 
+export async function removeCohost(cohostId: string, meetingId: string, orgSlug: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not signed in" };
+
+  const svc = createServiceClient();
+  const { data: cohost } = await svc.from("meeting_cohosts").select("meeting_id, meetings(org_id)").eq("id", cohostId).single();
+  if (!cohost) return { ok: false as const, error: "Not found." };
+
+  const meetingOrgId = (cohost.meetings as unknown as { org_id: string } | null)?.org_id;
+  if (!meetingOrgId) return { ok: false as const, error: "Meeting not found." };
+
+  const { data: myMem } = await supabase.from("org_members").select("role")
+    .eq("org_id", meetingOrgId).eq("user_id", user.id).eq("status", "active").maybeSingle();
+  if (!myMem || !["officer", "director"].includes(myMem.role)) return { ok: false as const, error: "Not authorized." };
+
+  await svc.from("meeting_cohosts").delete().eq("id", cohostId);
+
+  revalidatePath(`/orgs/${orgSlug}/meetings/${meetingId}`);
+  return { ok: true as const };
+}
+
 export async function respondCohost(cohostId: string, meetingId: string, orgSlug: string, accept: boolean) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();

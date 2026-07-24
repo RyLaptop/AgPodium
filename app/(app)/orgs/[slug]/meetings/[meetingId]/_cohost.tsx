@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { inviteCohost, respondCohost } from "../actions";
+import { inviteCohost, respondCohost, removeCohost } from "../actions";
 
 type Cohost = {
   id: string;
@@ -51,6 +51,15 @@ export function CohostPanel({
   const respond = (cohostId: string, accept: boolean) => {
     startTransition(async () => {
       const res = await respondCohost(cohostId, meetingId, orgSlug, accept);
+      if (!res.ok) alert(res.error);
+      else router.refresh();
+    });
+  };
+
+  const remove = (cohostId: string) => {
+    if (!confirm("Remove this org from co-hosting?")) return;
+    startTransition(async () => {
+      const res = await removeCohost(cohostId, meetingId, orgSlug);
       if (!res.ok) alert(res.error);
       else router.refresh();
     });
@@ -116,16 +125,28 @@ export function CohostPanel({
       ) : (
         <div className="flex flex-wrap gap-2">
           {cohosts.map((c) => (
-            <Link key={c.id} href={`/orgs/${c.org_slug}`}
-              className={`text-sm px-3 py-1.5 border rounded-full transition ${
-                c.status === "accepted" ? "border-brand/30 text-brand bg-brand/5" :
-                c.status === "declined" ? "border-gray-200 text-gray-400 line-through" :
-                "border-yellow-300 text-yellow-700 bg-yellow-50"
-              }`}>
-              {c.org_name}
-              {c.status === "pending" && " (pending)"}
-              {c.status === "declined" && " (declined)"}
-            </Link>
+            <div key={c.id} className="flex items-center gap-1">
+              <Link href={`/orgs/${c.org_slug}`}
+                className={`text-sm px-3 py-1.5 border rounded-full transition ${
+                  c.status === "accepted" ? "border-brand/30 text-brand bg-brand/5" :
+                  c.status === "declined" ? "border-gray-200 text-gray-400 line-through" :
+                  "border-yellow-300 text-yellow-700 bg-yellow-50"
+                }`}>
+                {c.org_name}
+                {c.status === "pending" && " (pending)"}
+                {c.status === "declined" && " (declined)"}
+              </Link>
+              {isOfficer && c.status !== "declined" && (
+                <button
+                  onClick={() => remove(c.id)}
+                  disabled={pending}
+                  className="text-gray-300 hover:text-red-400 transition disabled:opacity-40"
+                  title="Remove co-host"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
           ))}
         </div>
       )}
