@@ -15,30 +15,30 @@ function AuthModal({ onClose }: { onClose: () => void }) {
       onClick={onClose}
     >
       <div
-        className="relative bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full mx-4"
+        className="relative bg-white rounded-lg shadow-2xl p-8 w-[30vw] min-w-[300px] max-w-md"
         onClick={(e) => e.stopPropagation()}
       >
         <button
           onClick={onClose}
           aria-label="Close"
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-xl leading-none"
+          className="absolute top-3 right-3 text-red-400 hover:text-red-600 text-lg font-bold leading-none"
         >
           ✕
         </button>
-        <h2 className="text-2xl font-bold mb-2">Sign in to continue</h2>
+        <h2 className="text-xl font-bold mb-2">Sign in required</h2>
         <p className="text-gray-500 text-sm mb-6">
-          Create a free account or sign in to use this feature.
+          To access this feature you must be signed in.
         </p>
         <div className="flex flex-col gap-3">
           <Link
             href="/login"
-            className="px-4 py-3 bg-brand text-white rounded-xl text-sm text-center font-medium hover:bg-brand-dark transition"
+            className="px-4 py-3 bg-brand text-white rounded-lg text-sm text-center font-medium hover:bg-brand-dark transition"
           >
             Sign in
           </Link>
           <Link
             href="/signup"
-            className="px-4 py-3 border border-gray-300 rounded-xl text-sm text-center text-gray-700 hover:bg-gray-50 transition"
+            className="px-4 py-3 border border-gray-300 rounded-lg text-sm text-center text-gray-700 hover:bg-gray-50 transition"
           >
             Create account
           </Link>

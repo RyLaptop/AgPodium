@@ -32,7 +32,6 @@ export async function updateSession(request: NextRequest) {
   // Hard-protect only routes that must never be accessible without auth
   const mustAuth =
     request.nextUrl.pathname.startsWith("/messages") ||
-    request.nextUrl.pathname.startsWith("/profile") ||
     request.nextUrl.pathname.startsWith("/bulletin/admin");
 
   if (mustAuth && !user) {

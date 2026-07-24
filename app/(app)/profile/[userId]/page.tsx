@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { EditProfileForm } from "./_edit-profile";
 import { UserAvatar } from "@/components/user-avatar";
 import { MessageButton } from "./_message-button";
@@ -15,21 +16,22 @@ export default async function ProfilePage({
 }) {
   const { userId } = await params;
   const supabase = await createClient();
+  const svc = createServiceClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   const [{ data: profile }, { data: memberships }, { data: recentSpeaks }] =
     await Promise.all([
-      supabase
+      svc
         .from("users")
         .select("id, full_name, email, bio, major, avatar_url, created_at")
         .eq("id", userId)
         .single(),
-      supabase
+      svc
         .from("org_members")
         .select("role, orgs(id, slug, name)")
         .eq("user_id", userId)
         .eq("status", "active"),
-      supabase
+      svc
         .from("speak_requests")
         .select("id, meetings(title, starts_at, orgs(name))")
         .eq("requester_user_id", userId)
