@@ -1,15 +1,9 @@
-import dynamic from "next/dynamic";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { MapWrapper } from "./_map-wrapper";
 
-export const dynamic_ = "force-dynamic";
-export { dynamic_ as dynamic };
-
-const MapClient = dynamic(
-  () => import("./_map-client").then((m) => m.MapClient),
-  { ssr: false, loading: () => <div className="w-full h-96 rounded-xl bg-gray-100 animate-pulse" /> }
-);
+export const dynamic = "force-dynamic";
 
 type MapMeeting = {
   id: string;
@@ -112,7 +106,7 @@ export default async function MapPage() {
         <div className="space-y-4">
           {/* Map */}
           <div className="w-full rounded-xl overflow-hidden border border-gray-200" style={{ height: "420px" }}>
-            <MapClient meetings={meetings} />
+            <MapWrapper meetings={meetings} />
           </div>
 
           {/* Legend / list */}
