@@ -3,21 +3,27 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { addAffiliation, removeAffiliation } from "../actions";
+import { addAffiliation, removeAffiliation, respondAffiliation } from "../actions";
 
-type AffiliatedOrg = { id: string; slug: string; name: string };
+type AffiliationRow = {
+  id: string;
+  status: "pending" | "accepted" | "declined";
+  isOutgoing: boolean;
+  org: { id: string; slug: string; name: string };
+};
+
 type SearchableOrg = { id: string; slug: string; name: string };
 
 export function Affiliations({
   orgId,
   orgSlug,
-  affiliated,
+  affiliations,
   allOrgs,
   isDirector,
 }: {
   orgId: string;
   orgSlug: string;
-  affiliated: AffiliatedOrg[];
+  affiliations: AffiliationRow[];
   allOrgs: SearchableOrg[];
   isDirector: boolean;
 }) {
@@ -26,7 +32,11 @@ export function Affiliations({
   const [adding, setAdding] = useState(false);
   const router = useRouter();
 
-  const affiliatedIds = new Set(affiliated.map((a) => a.id));
+  const accepted = affiliations.filter((a) => a.status === "accepted");
+  const pendingIncoming = affiliations.filter((a) => a.status === "pending" && !a.isOutgoing);
+  const pendingOutgoing = affiliations.filter((a) => a.status === "pending" && a.isOutgoing);
+
+  const affiliatedIds = new Set(affiliations.map((a) => a.org.id));
   const candidates = allOrgs.filter(
     (o) => o.id !== orgId && !affiliatedIds.has(o.id) &&
       o.name.toLowerCase().includes(search.toLowerCase())
@@ -40,16 +50,25 @@ export function Affiliations({
     });
   };
 
-  const remove = (affiliateOrgId: string, name: string) => {
+  const remove = (affiliationId: string, name: string) => {
     if (!confirm(`Remove affiliation with ${name}?`)) return;
     startTransition(async () => {
-      const res = await removeAffiliation(orgId, orgSlug, affiliateOrgId);
+      const res = await removeAffiliation(affiliationId, orgSlug);
       if (!res.ok) alert(res.error);
       else router.refresh();
     });
   };
 
-  if (affiliated.length === 0 && !isDirector) return null;
+  const respond = (affiliationId: string, accept: boolean) => {
+    startTransition(async () => {
+      const res = await respondAffiliation(affiliationId, orgSlug, accept);
+      if (!res.ok) alert(res.error);
+      else router.refresh();
+    });
+  };
+
+  const hasAnything = accepted.length > 0 || pendingIncoming.length > 0 || pendingOutgoing.length > 0;
+  if (!hasAnything && !isDirector) return null;
 
   return (
     <section>
@@ -60,7 +79,7 @@ export function Affiliations({
             onClick={() => setAdding((v) => !v)}
             className="text-xs text-brand hover:underline"
           >
-            {adding ? "Cancel" : "+ Add affiliation"}
+            {adding ? "Cancel" : "+ Request affiliation"}
           </button>
         )}
       </div>
@@ -94,26 +113,73 @@ export function Affiliations({
         </div>
       )}
 
-      {affiliated.length === 0 ? (
+      {pendingIncoming.length > 0 && isDirector && (
+        <div className="mb-3 space-y-2">
+          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Incoming requests</p>
+          {pendingIncoming.map((a) => (
+            <div key={a.id} className="flex items-center justify-between border border-yellow-200 bg-yellow-50 rounded-lg px-3 py-2">
+              <Link href={`/orgs/${a.org.slug}`} className="text-sm font-medium hover:text-brand">
+                {a.org.name}
+              </Link>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => respond(a.id, true)}
+                  disabled={pending}
+                  className="text-xs px-2.5 py-1 bg-brand text-white rounded-lg hover:bg-brand-dark disabled:opacity-60"
+                >
+                  Accept
+                </button>
+                <button
+                  onClick={() => respond(a.id, false)}
+                  disabled={pending}
+                  className="text-xs px-2.5 py-1 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 disabled:opacity-60"
+                >
+                  Decline
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {accepted.length === 0 && pendingOutgoing.length === 0 ? (
         isDirector ? (
           <p className="text-sm text-gray-400 italic">No affiliated orgs yet.</p>
         ) : null
       ) : (
         <div className="flex flex-wrap gap-2">
-          {affiliated.map((a) => (
+          {accepted.map((a) => (
             <div key={a.id} className="flex items-center gap-1">
               <Link
-                href={`/orgs/${a.slug}`}
+                href={`/orgs/${a.org.slug}`}
                 className="text-sm px-3 py-1.5 border border-gray-200 rounded-full hover:border-brand hover:text-brand transition"
               >
-                {a.name}
+                {a.org.name}
               </Link>
               {isDirector && (
                 <button
-                  onClick={() => remove(a.id, a.name)}
+                  onClick={() => remove(a.id, a.org.name)}
                   disabled={pending}
                   className="text-gray-300 hover:text-red-400 transition disabled:opacity-40"
                   title="Remove affiliation"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          ))}
+
+          {pendingOutgoing.map((a) => (
+            <div key={a.id} className="flex items-center gap-1">
+              <span className="text-sm px-3 py-1.5 border border-dashed border-gray-300 rounded-full text-gray-400">
+                {a.org.name} <span className="text-xs">(pending)</span>
+              </span>
+              {isDirector && (
+                <button
+                  onClick={() => remove(a.id, a.org.name)}
+                  disabled={pending}
+                  className="text-gray-300 hover:text-red-400 transition disabled:opacity-40"
+                  title="Cancel request"
                 >
                   ✕
                 </button>

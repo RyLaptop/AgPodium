@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { NewMeetingForm } from "./_form";
 
 export default async function NewMeetingPage({
@@ -49,6 +50,16 @@ export default async function NewMeetingPage({
     );
   }
 
+  const svc = createServiceClient();
+  const { data: allOrgsData } = await svc
+    .from("orgs")
+    .select("id, name")
+    .eq("status", "approved")
+    .neq("id", org.id)
+    .order("name");
+
+  const allOrgs = (allOrgsData ?? []).map((o) => ({ id: o.id, name: o.name }));
+
   return (
     <div className="max-w-lg space-y-4">
       <Link href={`/orgs/${slug}`} className="text-sm text-gray-500">
@@ -56,7 +67,7 @@ export default async function NewMeetingPage({
       </Link>
       <h1 className="text-3xl font-bold">New meeting</h1>
       <p className="text-gray-600">for {org.name}</p>
-      <NewMeetingForm orgId={org.id} orgSlug={slug} />
+      <NewMeetingForm orgId={org.id} orgSlug={slug} allOrgs={allOrgs} />
     </div>
   );
 }

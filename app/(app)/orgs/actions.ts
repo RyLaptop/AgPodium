@@ -378,27 +378,102 @@ export async function addAffiliation(orgId: string, orgSlug: string, affiliateOr
   if (!myMem || myMem.role !== "director") return { ok: false as const, error: "Only STAFF can manage affiliations." };
 
   const svc = createServiceClient();
-  await svc.from("org_affiliations").insert([
-    { org_id: orgId, affiliate_org_id: affiliateOrgId },
-    { org_id: affiliateOrgId, affiliate_org_id: orgId },
+
+  // Check no existing row between these two orgs (in either direction)
+  const { data: existing } = await svc.from("org_affiliations")
+    .select("id")
+    .or(`and(org_id.eq.${orgId},affiliate_org_id.eq.${affiliateOrgId}),and(org_id.eq.${affiliateOrgId},affiliate_org_id.eq.${orgId})`)
+    .maybeSingle();
+  if (existing) return { ok: false as const, error: "A request already exists between these orgs." };
+
+  const { error } = await svc.from("org_affiliations").insert({
+    org_id: orgId,
+    affiliate_org_id: affiliateOrgId,
+    status: "pending",
+  });
+  if (error) return { ok: false as const, error: error.message };
+
+  // Notify staff of the target org
+  const [{ data: myOrg }, { data: targetStaff }] = await Promise.all([
+    svc.from("orgs").select("name").eq("id", orgId).single(),
+    svc.from("org_members").select("user_id").eq("org_id", affiliateOrgId)
+      .in("role", ["director", "officer"]).eq("status", "active"),
   ]);
+  const targetSlug = await svc.from("orgs").select("slug").eq("id", affiliateOrgId).single().then((r) => r.data?.slug ?? "");
+  if (targetStaff && targetStaff.length > 0) {
+    await notify(targetStaff.map((m) => ({
+      userId: m.user_id,
+      type: "request_update" as const,
+      title: `${myOrg?.name ?? "An org"} wants to affiliate`,
+      body: `Review the request on your org page.`,
+      link: `/orgs/${targetSlug}`,
+    })));
+  }
 
   revalidatePath(`/orgs/${orgSlug}`);
   return { ok: true as const };
 }
 
-export async function removeAffiliation(orgId: string, orgSlug: string, affiliateOrgId: string) {
+export async function removeAffiliation(affiliationId: string, orgSlug: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false as const, error: "Not signed in" };
 
+  const svc = createServiceClient();
+
+  // Verify the user is staff of one of the orgs in this affiliation
+  const { data: row } = await svc.from("org_affiliations").select("org_id, affiliate_org_id").eq("id", affiliationId).single();
+  if (!row) return { ok: false as const, error: "Not found." };
+
   const { data: myMem } = await supabase.from("org_members").select("role")
-    .eq("org_id", orgId).eq("user_id", user.id).eq("status", "active").maybeSingle();
-  if (!myMem || myMem.role !== "director") return { ok: false as const, error: "Only STAFF can manage affiliations." };
+    .in("org_id", [row.org_id, row.affiliate_org_id])
+    .eq("user_id", user.id).eq("status", "active").in("role", ["director", "officer"]).maybeSingle();
+  if (!myMem) return { ok: false as const, error: "Not authorized." };
+
+  await svc.from("org_affiliations").delete().eq("id", affiliationId);
+
+  revalidatePath(`/orgs/${orgSlug}`);
+  return { ok: true as const };
+}
+
+export async function respondAffiliation(affiliationId: string, orgSlug: string, accept: boolean) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not signed in" };
 
   const svc = createServiceClient();
-  await svc.from("org_affiliations").delete()
-    .or(`and(org_id.eq.${orgId},affiliate_org_id.eq.${affiliateOrgId}),and(org_id.eq.${affiliateOrgId},affiliate_org_id.eq.${orgId})`);
+
+  const { data: row } = await svc.from("org_affiliations")
+    .select("org_id, affiliate_org_id, status")
+    .eq("id", affiliationId).single();
+  if (!row) return { ok: false as const, error: "Not found." };
+  if (row.status !== "pending") return { ok: false as const, error: "Already responded." };
+
+  // Only staff of the target org (affiliate_org_id) can respond
+  const { data: myMem } = await supabase.from("org_members").select("role")
+    .eq("org_id", row.affiliate_org_id).eq("user_id", user.id)
+    .eq("status", "active").in("role", ["director", "officer"]).maybeSingle();
+  if (!myMem) return { ok: false as const, error: "Not authorized." };
+
+  await svc.from("org_affiliations").update({ status: accept ? "accepted" : "declined" }).eq("id", affiliationId);
+
+  // Notify requesting org staff
+  const [{ data: myOrg }, { data: requesterStaff }] = await Promise.all([
+    svc.from("orgs").select("name, slug").eq("id", row.affiliate_org_id).single(),
+    svc.from("org_members").select("user_id").eq("org_id", row.org_id)
+      .in("role", ["director", "officer"]).eq("status", "active"),
+  ]);
+  const requesterSlug = await svc.from("orgs").select("slug").eq("id", row.org_id).single().then((r) => r.data?.slug ?? "");
+  if (requesterStaff && requesterStaff.length > 0) {
+    await notify(requesterStaff.map((m) => ({
+      userId: m.user_id,
+      type: "request_update" as const,
+      title: accept
+        ? `${myOrg?.name ?? "An org"} accepted your affiliation request`
+        : `${myOrg?.name ?? "An org"} declined your affiliation request`,
+      link: `/orgs/${requesterSlug}`,
+    })));
+  }
 
   revalidatePath(`/orgs/${orgSlug}`);
   return { ok: true as const };

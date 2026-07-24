@@ -38,7 +38,7 @@ export function OrgSearch({ orgs }: { orgs: Org[] }) {
     const now = Date.now();
     return orgs.filter((o) => {
       if (activeTag && !o.tags.includes(activeTag)) return false;
-      if (needle && !o.name.toLowerCase().includes(needle) && !(o.description ?? "").toLowerCase().includes(needle)) return false;
+      if (needle && !o.name.toLowerCase().includes(needle)) return false;
       if (sizeFilter === "small" && o.member_count > 15) return false;
       if (sizeFilter === "medium" && (o.member_count <= 15 || o.member_count > 50)) return false;
       if (sizeFilter === "large" && o.member_count <= 50) return false;

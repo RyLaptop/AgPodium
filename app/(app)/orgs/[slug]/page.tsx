@@ -57,8 +57,9 @@ export default async function OrgProfilePage({
         .limit(10),
       svc.from("org_invites").select("id, code").eq("org_id", org.id).maybeSingle(),
       svc.from("org_affiliations")
-        .select("affiliate_org_id, orgs!org_affiliations_affiliate_org_id_fkey(id, slug, name)")
-        .eq("org_id", org.id),
+        .select("id, org_id, affiliate_org_id, status, requester_org:orgs!org_affiliations_org_id_fkey(id, slug, name), target_org:orgs!org_affiliations_affiliate_org_id_fkey(id, slug, name)")
+        .or(`org_id.eq.${org.id},affiliate_org_id.eq.${org.id}`)
+        .neq("status", "declined"),
       svc.from("orgs").select("id, slug, name").eq("status", "approved").order("name"),
     ]);
 
@@ -104,9 +105,26 @@ export default async function OrgProfilePage({
 
   const tags = (org.tags as unknown as string[]) ?? [];
 
-  const affiliated = (affiliatedRows ?? []).map((r) => {
-    const o = r.orgs as unknown as { id: string; slug: string; name: string };
-    return { id: o.id, slug: o.slug, name: o.name };
+  type AffiliationRow = {
+    id: string;
+    status: "pending" | "accepted" | "declined";
+    isOutgoing: boolean;
+    org: { id: string; slug: string; name: string };
+  };
+
+  const affiliationRows: AffiliationRow[] = (affiliatedRows ?? []).map((r) => {
+    const row = r as unknown as {
+      id: string; org_id: string; affiliate_org_id: string; status: string;
+      requester_org: { id: string; slug: string; name: string };
+      target_org: { id: string; slug: string; name: string };
+    };
+    const isOutgoing = row.org_id === org.id;
+    return {
+      id: row.id,
+      status: row.status as "pending" | "accepted" | "declined",
+      isOutgoing,
+      org: isOutgoing ? row.target_org : row.requester_org,
+    };
   });
 
   const allOrgsList = (allOrgs ?? []).filter((o) => o.id !== org.id).map((o) => ({ id: o.id, slug: o.slug, name: o.name }));
@@ -194,9 +212,9 @@ export default async function OrgProfilePage({
       <Affiliations
         orgId={org.id}
         orgSlug={org.slug}
-        affiliated={affiliated}
+        affiliations={affiliationRows}
         allOrgs={allOrgsList}
-        isDirector={isDirector}
+        isDirector={isDirector || (myMembership?.role === "officer" && myMembership?.status === "active")}
       />
 
       {pendingForDirector.length > 0 && (

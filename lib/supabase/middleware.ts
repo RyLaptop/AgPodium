@@ -29,15 +29,13 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Protected route pattern — anything under /(protected) requires auth.
-  const isProtected =
-    request.nextUrl.pathname.startsWith("/dashboard") ||
-    request.nextUrl.pathname.startsWith("/orgs") ||
-    request.nextUrl.pathname.startsWith("/meetings") ||
-    request.nextUrl.pathname.startsWith("/requests") ||
-    request.nextUrl.pathname.startsWith("/bulletin");
+  // Hard-protect only routes that must never be accessible without auth
+  const mustAuth =
+    request.nextUrl.pathname.startsWith("/messages") ||
+    request.nextUrl.pathname.startsWith("/profile") ||
+    request.nextUrl.pathname.startsWith("/bulletin/admin");
 
-  if (isProtected && !user) {
+  if (mustAuth && !user) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);

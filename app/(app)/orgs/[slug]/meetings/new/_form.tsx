@@ -6,13 +6,32 @@ import { createMeeting, type CreateMeetingResult } from "../actions";
 export function NewMeetingForm({
   orgId,
   orgSlug,
+  allOrgs,
 }: {
   orgId: string;
   orgSlug: string;
+  allOrgs: { id: string; name: string }[];
 }) {
   const action = createMeeting.bind(null, orgId, orgSlug);
   const [state, formAction, pending] = useActionState<CreateMeetingResult | null, FormData>(action, null);
   const [repeatType, setRepeatType] = useState("none");
+  const [cohostIds, setCohostIds] = useState<string[]>([]);
+  const [cohostSearch, setCohostSearch] = useState("");
+  const [showCohostSearch, setShowCohostSearch] = useState(false);
+
+  const selectedCohosts = allOrgs.filter((o) => cohostIds.includes(o.id));
+  const cohostCandidates = allOrgs.filter(
+    (o) => !cohostIds.includes(o.id) && o.name.toLowerCase().includes(cohostSearch.toLowerCase())
+  );
+
+  const addCohost = (id: string) => {
+    setCohostIds((prev) => [...prev, id]);
+    setCohostSearch("");
+  };
+
+  const removeCohost = (id: string) => {
+    setCohostIds((prev) => prev.filter((x) => x !== id));
+  };
 
   return (
     <form action={formAction} className="space-y-4">
@@ -125,9 +144,64 @@ export function NewMeetingForm({
       </div>
       {repeatType !== "none" && (
         <p className="text-xs text-gray-500">
-          Creates multiple meetings with the same settings. You'll be taken to the org page when done.
+          Creates multiple meetings with the same settings. You&apos;ll be taken to the org page when done.
         </p>
       )}
+
+      {/* Co-host orgs */}
+      <div>
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-sm font-medium">Co-host orgs (optional)</span>
+          <button
+            type="button"
+            onClick={() => setShowCohostSearch((v) => !v)}
+            className="text-xs text-brand hover:underline"
+          >
+            {showCohostSearch ? "Close" : "+ Add co-host"}
+          </button>
+        </div>
+
+        {selectedCohosts.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-2">
+            {selectedCohosts.map((o) => (
+              <span key={o.id} className="flex items-center gap-1 text-xs px-2.5 py-1 bg-brand/10 text-brand rounded-full">
+                {o.name}
+                <button type="button" onClick={() => removeCohost(o.id)} className="hover:text-red-500 ml-0.5">✕</button>
+                <input type="hidden" name="cohost_org_id" value={o.id} />
+              </span>
+            ))}
+          </div>
+        )}
+
+        {showCohostSearch && (
+          <div className="border border-gray-200 rounded-lg p-3 space-y-2">
+            <input
+              value={cohostSearch}
+              onChange={(e) => setCohostSearch(e.target.value)}
+              placeholder="Search orgs…"
+              className="w-full text-sm px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand"
+            />
+            {cohostSearch && (
+              <ul className="space-y-1 max-h-40 overflow-y-auto">
+                {cohostCandidates.slice(0, 8).map((o) => (
+                  <li key={o.id}>
+                    <button
+                      type="button"
+                      onClick={() => addCohost(o.id)}
+                      className="w-full text-left text-sm px-3 py-2 rounded hover:bg-gray-50 hover:text-brand"
+                    >
+                      {o.name}
+                    </button>
+                  </li>
+                ))}
+                {cohostCandidates.length === 0 && (
+                  <li className="text-xs text-gray-400 px-3 py-2">No orgs found.</li>
+                )}
+              </ul>
+            )}
+          </div>
+        )}
+      </div>
 
       <button
         type="submit"

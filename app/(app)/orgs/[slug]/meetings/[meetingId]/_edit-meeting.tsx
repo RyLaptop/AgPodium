@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { updateMeeting, cancelMeeting, deleteMeeting } from "../actions";
+import { updateMeeting, deleteMeeting } from "../actions";
 
 function toLocal(iso: string) {
   const d = new Date(iso);
@@ -57,15 +57,6 @@ export function EditMeeting({ meetingId, orgSlug, title, startsAt, endsAt, locat
     });
   };
 
-  const doCancel = () => {
-    if (!confirm("Cancel this meeting? All speakers and waitlisted people will be notified.")) return;
-    startTransition(async () => {
-      const res = await cancelMeeting(meetingId, orgSlug);
-      if (!res.ok) alert(res.error);
-      else router.refresh();
-    });
-  };
-
   const doDelete = () => {
     if (!confirm("Permanently delete this meeting? This cannot be undone.")) return;
     startTransition(async () => {
@@ -81,13 +72,6 @@ export function EditMeeting({ meetingId, orgSlug, title, startsAt, endsAt, locat
           className="text-sm px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50"
         >
           Edit meeting
-        </button>
-        <button
-          onClick={doCancel}
-          disabled={pending}
-          className="text-sm px-3 py-1.5 border border-orange-300 text-orange-600 rounded-lg hover:bg-orange-50 disabled:opacity-60"
-        >
-          Cancel meeting
         </button>
         <button
           onClick={doDelete}

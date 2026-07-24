@@ -33,6 +33,7 @@ export async function createMeeting(
   const slotLength = Number(formData.get("slot_length_minutes") ?? 2);
   const repeatType = String(formData.get("repeat_type") ?? "none");
   const repeatCount = Math.min(24, Math.max(2, Number(formData.get("repeat_count") ?? 4)));
+  const cohostOrgIds = formData.getAll("cohost_org_id").map(String).filter(Boolean);
 
   if (title.length < 2) return { ok: false, error: "Title is too short." };
   if (!startsAtStr) return { ok: false, error: "Start time is required." };
@@ -53,6 +54,7 @@ export async function createMeeting(
     return { ok: false, error: "Slot length must be 1–60 minutes." };
 
   const supabase = await createClient();
+  const svc = createServiceClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -84,6 +86,34 @@ export async function createMeeting(
   if (error) return { ok: false, error: error.message };
 
   const firstId = inserted?.[0]?.id;
+
+  // Insert co-host invites for all created meetings
+  if (cohostOrgIds.length > 0 && inserted && inserted.length > 0) {
+    const cohostRows = inserted.flatMap((m) =>
+      cohostOrgIds.map((cohostOrgId) => ({
+        meeting_id: m.id,
+        org_id: cohostOrgId,
+        invited_by: user.id,
+        status: "pending",
+      }))
+    );
+    await svc.from("meeting_cohosts").insert(cohostRows);
+
+    const { data: myOrgData } = await supabase.from("orgs").select("name").eq("id", orgId).single();
+    for (const cohostOrgId of cohostOrgIds) {
+      const { data: directors } = await svc.from("org_members").select("user_id")
+        .eq("org_id", cohostOrgId).in("role", ["director", "officer"]).eq("status", "active");
+      if (directors && directors.length > 0) {
+        await notify(directors.map((d) => ({
+          userId: d.user_id,
+          type: "org_meeting" as const,
+          title: `Co-host invite: ${title}`,
+          body: `${myOrgData?.name ?? "An org"} invited your org to co-host`,
+          link: firstId ? `/orgs/${orgSlug}/meetings/${firstId}` : `/orgs/${orgSlug}`,
+        })));
+      }
+    }
+  }
 
   // Notify members
   const { data: members } = await supabase
