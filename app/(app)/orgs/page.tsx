@@ -1,4 +1,3 @@
-import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { OrgSearch } from "./_search";
 import { AuthGatedLink } from "@/app/(app)/_auth-gate";
@@ -18,12 +17,11 @@ type OrgRow = {
 };
 
 export default async function OrgsPage() {
-  const supabase = await createClient();
   const svc = createServiceClient();
 
   const [{ data: orgs }, { data: activeMembers }, { data: upcomingMeetings }] = await Promise.all([
     svc.from("orgs").select("id, slug, name, description, tags, logo_url").eq("status", "approved").order("name"),
-    supabase.from("org_members").select("org_id").eq("status", "active"),
+    svc.from("org_members").select("org_id").eq("status", "active"),
     svc.from("meetings")
       .select("org_id, starts_at")
       .gte("starts_at", new Date().toISOString())
