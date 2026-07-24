@@ -7,7 +7,14 @@ export const dynamic = "force-dynamic";
 export default async function CalendarPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
+  if (!user) return (
+    <div className="max-w-2xl space-y-6">
+      <h1 className="text-3xl font-bold">Calendar</h1>
+      <p className="text-gray-500 text-sm">
+        You have to join an organization to see their meetings on the calendar.
+      </p>
+    </div>
+  );
 
   const from = new Date();
   from.setMonth(from.getMonth() - 1);
