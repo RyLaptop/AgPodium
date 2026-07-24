@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { EditProfileForm } from "./_edit-profile";
 import { UserAvatar } from "@/components/user-avatar";
+import { MessageButton } from "./_message-button";
 
 export const dynamic = "force-dynamic";
 
@@ -58,6 +59,11 @@ export default async function ProfilePage({
         )}
         {!profile.bio && !profile.major && isSelf && (
           <p className="text-gray-400 mt-2 text-sm italic">Add your major and a bio so others know who you are.</p>
+        )}
+        {!isSelf && user && (
+          <div className="mt-4">
+            <MessageButton targetUserId={userId} />
+          </div>
         )}
         {isSelf && (
           <div className="mt-4">

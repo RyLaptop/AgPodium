@@ -43,13 +43,24 @@ export async function createOrg(
     return { ok: false, error: error.message };
   }
 
-  if (tags.length > 0) {
-    const svc = createServiceClient();
-    await svc.from("orgs").update({ tags }).eq("slug", slug);
+  const svc = createServiceClient();
+  // Set status to pending and apply tags
+  await svc.from("orgs").update({ status: "pending", ...(tags.length > 0 ? { tags } : {}) }).eq("slug", slug);
+
+  // Notify all site admins
+  const { data: admins } = await svc.from("users").select("id").eq("is_site_admin", true);
+  if (admins && admins.length > 0) {
+    await notify(admins.map((a) => ({
+      userId: a.id,
+      type: "org_member_request" as const,
+      title: `New org request: ${name}`,
+      body: `"${slug}" is pending approval`,
+      link: `/bulletin/admin`,
+    })));
   }
 
   revalidatePath("/orgs");
-  redirect(`/orgs/${slug}`);
+  return { ok: true, slug };
 }
 
 export async function joinOrg(orgId: string) {
@@ -302,6 +313,140 @@ export async function deleteInvite(inviteId: string, orgSlug: string) {
   await svc.from("org_invites").delete().eq("id", inviteId);
 
   revalidatePath(`/orgs/${orgSlug}`);
+  return { ok: true as const };
+}
+
+export async function setMemberTitle(orgId: string, targetUserId: string, title: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not signed in" };
+
+  const { data: myMem } = await supabase.from("org_members").select("role")
+    .eq("org_id", orgId).eq("user_id", user.id).eq("status", "active").maybeSingle();
+  if (!myMem || myMem.role !== "director") return { ok: false as const, error: "Only STAFF can set titles." };
+
+  const svc = createServiceClient();
+  const { error } = await svc.from("org_members")
+    .update({ title: title.trim() || null })
+    .eq("org_id", orgId).eq("user_id", targetUserId).eq("status", "active");
+
+  if (error) return { ok: false as const, error: error.message };
+  revalidatePath(`/orgs`);
+  return { ok: true as const };
+}
+
+export async function uploadOrgLogo(orgId: string, orgSlug: string, formData: FormData) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not signed in" };
+
+  const { data: myMem } = await supabase.from("org_members").select("role")
+    .eq("org_id", orgId).eq("user_id", user.id).eq("status", "active").maybeSingle();
+  if (!myMem || myMem.role !== "director") return { ok: false as const, error: "Only STAFF can upload logos." };
+
+  const file = formData.get("logo") as File | null;
+  if (!file || file.size === 0) return { ok: false as const, error: "No file provided." };
+  if (file.size > 2 * 1024 * 1024) return { ok: false as const, error: "Logo must be under 2MB." };
+  if (!file.type.startsWith("image/")) return { ok: false as const, error: "File must be an image." };
+
+  const ext = file.name.split(".").pop() ?? "png";
+  const path = `${orgId}/logo.${ext}`;
+  const bytes = await file.arrayBuffer();
+
+  const svc = createServiceClient();
+  const { error: upErr } = await svc.storage.from("org-logos").upload(path, bytes, {
+    contentType: file.type,
+    upsert: true,
+  });
+  if (upErr) return { ok: false as const, error: upErr.message };
+
+  const { data: { publicUrl } } = svc.storage.from("org-logos").getPublicUrl(path);
+  const { error } = await svc.from("orgs").update({ logo_url: publicUrl }).eq("id", orgId);
+  if (error) return { ok: false as const, error: error.message };
+
+  revalidatePath(`/orgs/${orgSlug}`);
+  return { ok: true as const, url: publicUrl };
+}
+
+export async function addAffiliation(orgId: string, orgSlug: string, affiliateOrgId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not signed in" };
+
+  const { data: myMem } = await supabase.from("org_members").select("role")
+    .eq("org_id", orgId).eq("user_id", user.id).eq("status", "active").maybeSingle();
+  if (!myMem || myMem.role !== "director") return { ok: false as const, error: "Only STAFF can manage affiliations." };
+
+  const svc = createServiceClient();
+  await svc.from("org_affiliations").insert([
+    { org_id: orgId, affiliate_org_id: affiliateOrgId },
+    { org_id: affiliateOrgId, affiliate_org_id: orgId },
+  ]);
+
+  revalidatePath(`/orgs/${orgSlug}`);
+  return { ok: true as const };
+}
+
+export async function removeAffiliation(orgId: string, orgSlug: string, affiliateOrgId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not signed in" };
+
+  const { data: myMem } = await supabase.from("org_members").select("role")
+    .eq("org_id", orgId).eq("user_id", user.id).eq("status", "active").maybeSingle();
+  if (!myMem || myMem.role !== "director") return { ok: false as const, error: "Only STAFF can manage affiliations." };
+
+  const svc = createServiceClient();
+  await svc.from("org_affiliations").delete()
+    .or(`and(org_id.eq.${orgId},affiliate_org_id.eq.${affiliateOrgId}),and(org_id.eq.${affiliateOrgId},affiliate_org_id.eq.${orgId})`);
+
+  revalidatePath(`/orgs/${orgSlug}`);
+  return { ok: true as const };
+}
+
+export async function approveOrg(orgId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not signed in" };
+
+  const { data: profile } = await supabase.from("users").select("is_site_admin").eq("id", user.id).single();
+  if (!profile?.is_site_admin) return { ok: false as const, error: "Not authorized." };
+
+  const svc = createServiceClient();
+  const { data: org } = await svc.from("orgs").select("name, slug").eq("id", orgId).single();
+  await svc.from("orgs").update({ status: "approved" }).eq("id", orgId);
+
+  const { data: founder } = await svc.from("org_members")
+    .select("user_id").eq("org_id", orgId).eq("role", "director").eq("status", "active").limit(1).single();
+  if (founder && org) {
+    await notify([{ userId: founder.user_id, type: "org_member_request", title: `Your org "${org.name}" has been approved!`, link: `/orgs/${org.slug}` }]);
+  }
+
+  revalidatePath("/bulletin/admin");
+  revalidatePath("/orgs");
+  return { ok: true as const };
+}
+
+export async function rejectOrg(orgId: string, reason: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not signed in" };
+
+  const { data: profile } = await supabase.from("users").select("is_site_admin").eq("id", user.id).single();
+  if (!profile?.is_site_admin) return { ok: false as const, error: "Not authorized." };
+
+  const svc = createServiceClient();
+  const { data: org } = await svc.from("orgs").select("name").eq("id", orgId).single();
+  await svc.from("orgs").update({ status: "rejected", rejection_reason: reason || null }).eq("id", orgId);
+
+  const { data: founder } = await svc.from("org_members")
+    .select("user_id").eq("org_id", orgId).eq("role", "director").eq("status", "active").limit(1).single();
+  if (founder && org) {
+    await notify([{ userId: founder.user_id, type: "org_member_request", title: `Org request for "${org.name}" was declined`, body: reason || undefined }]);
+  }
+
+  revalidatePath("/bulletin/admin");
+  revalidatePath("/orgs");
   return { ok: true as const };
 }
 

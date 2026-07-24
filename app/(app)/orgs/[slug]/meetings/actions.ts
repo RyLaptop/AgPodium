@@ -195,9 +195,129 @@ export async function leaveWaitlist(meetingId: string, orgSlug: string) {
 
 export async function deleteMeeting(meetingId: string, orgSlug: string) {
   const supabase = await createClient();
-  const { error } = await supabase.from("meetings").delete().eq("id", meetingId);
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not signed in" };
+
+  const { data: meeting } = await supabase.from("meetings").select("org_id").eq("id", meetingId).single();
+  if (!meeting) return { ok: false as const, error: "Meeting not found." };
+
+  const { data: myMem } = await supabase.from("org_members").select("role")
+    .eq("org_id", meeting.org_id).eq("user_id", user.id).eq("status", "active").maybeSingle();
+  if (!myMem || !["officer", "director"].includes(myMem.role)) return { ok: false as const, error: "Not authorized." };
+
+  const svc = createServiceClient();
+  // Cancel all pending/approved speakers first
+  const { data: approvedSpeakers } = await svc.from("speak_requests")
+    .select("requester_user_id").eq("meeting_id", meetingId).in("status", ["pending", "approved"]);
+
+  if (approvedSpeakers && approvedSpeakers.length > 0) {
+    await svc.from("speak_requests").update({ status: "cancelled" })
+      .eq("meeting_id", meetingId).in("status", ["pending", "approved"]);
+    const { data: m } = await svc.from("meetings").select("title, orgs(name)").eq("id", meetingId).single();
+    const orgName = (m?.orgs as { name: string } | null)?.name ?? "";
+    await notify(approvedSpeakers.map((s) => ({
+      userId: s.requester_user_id,
+      type: "request_update" as const,
+      title: `Meeting cancelled: ${m?.title ?? ""}`,
+      body: `${orgName} cancelled this meeting`,
+    })));
+  }
+
+  const { error } = await svc.from("meetings").delete().eq("id", meetingId);
   if (error) return { ok: false as const, error: error.message };
   revalidatePath(`/orgs/${orgSlug}`);
+  redirect(`/orgs/${orgSlug}`);
+}
+
+export async function cancelMeeting(meetingId: string, orgSlug: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not signed in" };
+
+  const { data: meeting } = await supabase.from("meetings").select("org_id, title, orgs(name)").eq("id", meetingId).single();
+  if (!meeting) return { ok: false as const, error: "Meeting not found." };
+
+  const { data: myMem } = await supabase.from("org_members").select("role")
+    .eq("org_id", meeting.org_id).eq("user_id", user.id).eq("status", "active").maybeSingle();
+  if (!myMem || !["officer", "director"].includes(myMem.role)) return { ok: false as const, error: "Not authorized." };
+
+  const svc = createServiceClient();
+  await svc.from("meetings").update({ cancelled_at: new Date().toISOString() }).eq("id", meetingId);
+
+  const { data: speakers } = await svc.from("speak_requests")
+    .select("requester_user_id").eq("meeting_id", meetingId).in("status", ["pending", "approved", "waitlisted"]);
+
+  if (speakers && speakers.length > 0) {
+    await svc.from("speak_requests").update({ status: "cancelled" })
+      .eq("meeting_id", meetingId).in("status", ["pending", "approved", "waitlisted"]);
+    const orgName = (meeting.orgs as { name: string } | null)?.name ?? "";
+    await notify(speakers.map((s) => ({
+      userId: s.requester_user_id,
+      type: "request_update" as const,
+      title: `Meeting cancelled: ${meeting.title}`,
+      body: `${orgName} cancelled this meeting`,
+    })));
+  }
+
+  revalidatePath(`/orgs/${orgSlug}/meetings/${meetingId}`);
+  revalidatePath(`/orgs/${orgSlug}`);
+  return { ok: true as const };
+}
+
+export async function inviteCohost(meetingId: string, orgSlug: string, cohostOrgId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not signed in" };
+
+  const { data: meeting } = await supabase.from("meetings").select("org_id, title, orgs(name)").eq("id", meetingId).single();
+  if (!meeting) return { ok: false as const, error: "Meeting not found." };
+
+  const { data: myMem } = await supabase.from("org_members").select("role")
+    .eq("org_id", meeting.org_id).eq("user_id", user.id).eq("status", "active").maybeSingle();
+  if (!myMem || !["officer", "director"].includes(myMem.role)) return { ok: false as const, error: "Not authorized." };
+
+  const svc = createServiceClient();
+  const { error } = await svc.from("meeting_cohosts").insert({
+    meeting_id: meetingId, org_id: cohostOrgId, invited_by: user.id, status: "pending",
+  });
+  if (error) {
+    if (error.code === "23505") return { ok: false as const, error: "Already invited." };
+    return { ok: false as const, error: error.message };
+  }
+
+  const { data: directors } = await svc.from("org_members").select("user_id")
+    .eq("org_id", cohostOrgId).in("role", ["director", "officer"]).eq("status", "active");
+  const orgName = (meeting.orgs as { name: string } | null)?.name ?? "";
+  if (directors && directors.length > 0) {
+    await notify(directors.map((d) => ({
+      userId: d.user_id,
+      type: "org_meeting" as const,
+      title: `Co-host invite: ${meeting.title}`,
+      body: `${orgName} invited your org to co-host`,
+      link: `/orgs/${orgSlug}/meetings/${meetingId}`,
+    })));
+  }
+
+  revalidatePath(`/orgs/${orgSlug}/meetings/${meetingId}`);
+  return { ok: true as const };
+}
+
+export async function respondCohost(cohostId: string, meetingId: string, orgSlug: string, accept: boolean) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not signed in" };
+
+  const svc = createServiceClient();
+  const { data: cohost } = await svc.from("meeting_cohosts").select("org_id").eq("id", cohostId).single();
+  if (!cohost) return { ok: false as const, error: "Not found." };
+
+  const { data: myMem } = await supabase.from("org_members").select("role")
+    .eq("org_id", cohost.org_id).eq("user_id", user.id).eq("status", "active").maybeSingle();
+  if (!myMem || !["officer", "director"].includes(myMem.role)) return { ok: false as const, error: "Not authorized." };
+
+  await svc.from("meeting_cohosts").update({ status: accept ? "accepted" : "declined" }).eq("id", cohostId);
+
+  revalidatePath(`/orgs/${orgSlug}/meetings/${meetingId}`);
   return { ok: true as const };
 }
 

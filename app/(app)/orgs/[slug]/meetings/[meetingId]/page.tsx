@@ -8,6 +8,7 @@ import { WaitlistButton } from "./_waitlist";
 import { EditMeeting } from "./_edit-meeting";
 import { SpeakerManage } from "./_speaker-manage";
 import { StaffChat } from "./_staff-chat";
+import { CohostPanel } from "./_cohost";
 import type { ChatMessage, ChatUser } from "@/app/(app)/requests/[id]/_chat";
 
 export const dynamic = "force-dynamic";
@@ -26,7 +27,7 @@ export default async function MeetingPage({
   const { data: meeting } = await supabase
     .from("meetings")
     .select(
-      "id, title, agenda, location, starts_at, ends_at, slots_open, slot_length_minutes, org_id, orgs(name, slug)"
+      "id, title, agenda, location, starts_at, ends_at, slots_open, slot_length_minutes, org_id, cancelled_at, orgs(name, slug)"
     )
     .eq("id", meetingId)
     .single();
@@ -49,7 +50,9 @@ export default async function MeetingPage({
     myMembership?.role === "officer" || myMembership?.role === "director";
 
   const svc = createServiceClient();
-  const [{ data: approvedSpeakers }, { data: incoming }, { data: myOrgs }] =
+  const isCancelled = !!(meeting as unknown as { cancelled_at: string | null }).cancelled_at;
+
+  const [{ data: approvedSpeakers }, { data: incoming }, { data: myOrgs }, { data: cohostRows }, { data: allOrgs }] =
     await Promise.all([
       svc
         .from("speak_requests")
@@ -77,6 +80,10 @@ export default async function MeetingPage({
             .eq("status", "active")
             .in("role", ["officer", "director"])
         : Promise.resolve({ data: [] }),
+      svc.from("meeting_cohosts")
+        .select("id, org_id, status, orgs(name, slug)")
+        .eq("meeting_id", meetingId),
+      svc.from("orgs").select("id, slug, name").eq("status", "approved").neq("id", meeting.org_id).order("name"),
     ]);
 
   const usedSlots = approvedSpeakers?.length ?? 0;
@@ -161,8 +168,34 @@ export default async function MeetingPage({
     });
   }
 
+  const cohosts = (cohostRows ?? []).map((c) => {
+    const o = c.orgs as unknown as { name: string; slug: string } | null;
+    return {
+      id: c.id,
+      org_id: c.org_id,
+      org_name: o?.name ?? "",
+      org_slug: o?.slug ?? "",
+      status: c.status as "pending" | "accepted" | "declined",
+    };
+  });
+
+  const availableOrgs = (allOrgs ?? []).map((o) => ({ id: o.id, slug: o.slug, name: o.name }));
+
+  // Find which of the user's officer orgs (if any) was invited to co-host
+  const myOfficerOrgIds = new Set(
+    (myOrgs ?? []).map((m) => (m.orgs as unknown as { id: string } | null)?.id).filter(Boolean)
+  );
+  const myCohostedOrgId =
+    cohosts.find((c) => myOfficerOrgIds.has(c.org_id))?.org_id ?? null;
+
   return (
     <div className="space-y-8">
+      {isCancelled && (
+        <div className="px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 font-medium">
+          This meeting has been cancelled.
+        </div>
+      )}
+
       <div>
         <Link
           href={`/orgs/${slug}`}
@@ -248,7 +281,18 @@ export default async function MeetingPage({
         </section>
       )}
 
-      {user && !isOfficer && inFuture && slotsRemaining > 0 && (
+      {!isCancelled && (
+        <CohostPanel
+          meetingId={meetingId}
+          orgSlug={slug}
+          cohosts={cohosts}
+          availableOrgs={availableOrgs}
+          isOfficer={isOfficer}
+          myOrgId={myCohostedOrgId}
+        />
+      )}
+
+      {user && !isOfficer && inFuture && !isCancelled && slotsRemaining > 0 && (
         <section>
           <h2 className="text-xl font-semibold mb-3">Request a speaking slot</h2>
           {myExistingRequest ? (
@@ -274,7 +318,7 @@ export default async function MeetingPage({
         </section>
       )}
 
-      {user && !isOfficer && inFuture && (slotsRemaining === 0 || onWaitlist) && !myExistingRequest && (
+      {user && !isOfficer && inFuture && !isCancelled && (slotsRemaining === 0 || onWaitlist) && !myExistingRequest && (
         <section>
           <h2 className="text-xl font-semibold mb-3">Waitlist</h2>
           <WaitlistButton

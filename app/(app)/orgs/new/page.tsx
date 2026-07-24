@@ -15,6 +15,24 @@ export default function NewOrgPage() {
   const toggleTag = (tag: string) =>
     setTags((prev) => prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]);
 
+  if (state?.ok) {
+    return (
+      <div className="max-w-lg space-y-4">
+        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6 text-center space-y-3">
+          <p className="text-2xl">⏳</p>
+          <h2 className="text-xl font-bold text-yellow-800">Org request submitted!</h2>
+          <p className="text-yellow-700 text-sm">
+            A site admin will review your request for <strong>{state.slug}</strong> and notify you once it&apos;s approved.
+            This usually takes less than 24 hours.
+          </p>
+          <Link href="/dashboard" className="inline-block mt-2 px-4 py-2 bg-brand text-white rounded-lg text-sm hover:bg-brand-dark">
+            Back to dashboard
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-lg space-y-6">
       <div>
@@ -23,7 +41,8 @@ export default function NewOrgPage() {
         </Link>
         <h1 className="text-3xl font-bold mt-2">Create org</h1>
         <p className="text-gray-600 mt-1">
-          You&apos;ll be added as the founding director. You can invite others later.
+          Submit a request to create an org. A site admin will review and approve it.
+          You&apos;ll be added as the founding director once approved.
         </p>
       </div>
 
@@ -50,7 +69,7 @@ export default function NewOrgPage() {
             className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand"
           />
           <span className="text-xs text-gray-500 mt-1 block">
-            Lowercase letters, numbers, dashes. Used in the URL: yellpass.app/orgs/<em>slug</em>
+            Lowercase letters, numbers, dashes. Used in the URL: agpodium.com/orgs/<em>slug</em>
           </span>
         </label>
 
@@ -94,7 +113,7 @@ export default function NewOrgPage() {
             disabled={pending}
             className="px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand-dark disabled:opacity-60"
           >
-            {pending ? "Creating…" : "Create org"}
+            {pending ? "Submitting…" : "Submit request"}
           </button>
           <Link
             href="/orgs"

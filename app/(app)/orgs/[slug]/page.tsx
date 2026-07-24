@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -8,6 +9,7 @@ import { JoinLeaveButton } from "./_join-leave";
 import { PendingMembers } from "./_pending-members";
 import { ActiveMembers } from "./_active-members";
 import { EditOrgForm } from "./_edit-org";
+import { Affiliations } from "./_affiliations";
 
 export const dynamic = "force-dynamic";
 
@@ -18,51 +20,51 @@ export default async function OrgProfilePage({
 }) {
   const { slug } = await params;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
 
-  const { data: org } = await supabase
+  const svc = createServiceClient();
+  const { data: org } = await svc
     .from("orgs")
-    .select("id, slug, name, description, created_at, tags")
+    .select("id, slug, name, description, created_at, tags, logo_url, status")
     .eq("slug", slug)
     .single();
 
   if (!org) notFound();
 
-  const svc = createServiceClient();
-  const [{ data: members }, { data: meetings }, { data: myMembership }, { data: existingInvite }] =
+  // Pending orgs only visible to the founder (director) or admins
+  const { data: myMembership } = user
+    ? await supabase.from("org_members").select("role, status").eq("org_id", org.id).eq("user_id", user.id).maybeSingle()
+    : { data: null };
+
+  const { data: profile } = user
+    ? await supabase.from("users").select("is_site_admin").eq("id", user.id).single()
+    : { data: null };
+
+  if (org.status === "pending" && myMembership?.role !== "director" && !profile?.is_site_admin) {
+    notFound();
+  }
+
+  const [{ data: members }, { data: meetings }, { data: existingInvite }, { data: affiliatedRows }, { data: allOrgs }] =
     await Promise.all([
-      supabase
-        .from("org_members")
-        .select("role, status, users(id, full_name, email)")
-        .eq("org_id", org.id),
-      supabase
-        .from("meetings")
-        .select("id, title, starts_at, location, slots_open")
+      svc.from("org_members").select("role, status, title, users(id, full_name, email)").eq("org_id", org.id),
+      supabase.from("meetings")
+        .select("id, title, starts_at, location, slots_open, cancelled_at")
         .eq("org_id", org.id)
         .gte("starts_at", new Date().toISOString())
+        .is("cancelled_at", null)
         .order("starts_at", { ascending: true })
         .limit(10),
-      user
-        ? supabase
-            .from("org_members")
-            .select("role, status")
-            .eq("org_id", org.id)
-            .eq("user_id", user.id)
-            .maybeSingle()
-        : Promise.resolve({ data: null }),
       svc.from("org_invites").select("id, code").eq("org_id", org.id).maybeSingle(),
+      svc.from("org_affiliations")
+        .select("affiliate_org_id, orgs!org_affiliations_affiliate_org_id_fkey(id, slug, name)")
+        .eq("org_id", org.id),
+      svc.from("orgs").select("id, slug, name").eq("status", "approved").order("name"),
     ]);
 
-  // Count approved/completed speakers per meeting
   const meetingIds = (meetings ?? []).map((m) => m.id);
   const { data: approvedRows } = meetingIds.length > 0
-    ? await svc
-        .from("speak_requests")
-        .select("meeting_id")
-        .in("meeting_id", meetingIds)
-        .in("status", ["approved", "completed"])
+    ? await svc.from("speak_requests").select("meeting_id")
+        .in("meeting_id", meetingIds).in("status", ["approved", "completed"])
     : { data: [] };
 
   const approvedByMeeting = new Map<string, number>();
@@ -70,8 +72,8 @@ export default async function OrgProfilePage({
     approvedByMeeting.set(row.meeting_id, (approvedByMeeting.get(row.meeting_id) ?? 0) + 1);
   }
 
-  const activeMembers = members?.filter((m) => m.status === "active") ?? [];
-  const pendingMembers = members?.filter((m) => m.status === "pending") ?? [];
+  const activeMembers = (members ?? []).filter((m) => m.status === "active");
+  const pendingMembers = (members ?? []).filter((m) => m.status === "pending");
 
   const staff = activeMembers
     .filter((m) => m.role === "director")
@@ -95,62 +97,73 @@ export default async function OrgProfilePage({
   const activeMembersForDirector = isDirector
     ? activeMembers.map((m) => {
         const u = m.users as unknown as { id: string; full_name: string | null; email: string };
-        return { user_id: u.id, full_name: u.full_name, email: u.email, role: m.role };
+        return { user_id: u.id, full_name: u.full_name, email: u.email, role: m.role, title: (m as unknown as { title: string | null }).title ?? null };
       })
     : [];
 
   const tags = (org.tags as unknown as string[]) ?? [];
 
+  const affiliated = (affiliatedRows ?? []).map((r) => {
+    const o = r.orgs as unknown as { id: string; slug: string; name: string };
+    return { id: o.id, slug: o.slug, name: o.name };
+  });
+
+  const allOrgsList = (allOrgs ?? []).filter((o) => o.id !== org.id).map((o) => ({ id: o.id, slug: o.slug, name: o.name }));
+
   return (
     <div className="space-y-8">
       <div>
-        <Link href="/orgs" className="text-sm text-gray-500 hover:text-brand">
-          ← Orgs
-        </Link>
+        <Link href="/orgs" className="text-sm text-gray-500 hover:text-brand">← Orgs</Link>
+
+        {org.status === "pending" && (
+          <div className="mt-3 px-3 py-2 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
+            ⏳ This org is pending admin approval.
+          </div>
+        )}
 
         <div className="mt-4 flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold">{org.name}</h1>
-            {org.description && (
-              <p className="text-gray-700 mt-2 max-w-2xl">{org.description}</p>
+          <div className="flex items-start gap-4">
+            {org.logo_url && (
+              <Image
+                src={org.logo_url}
+                alt={org.name}
+                width={64}
+                height={64}
+                className="w-16 h-16 rounded-full object-cover border border-gray-200 shrink-0"
+              />
             )}
-            <p className="text-sm text-gray-500 mt-2">
-              {memberCount} member{memberCount === 1 ? "" : "s"}
-              {staff.length > 0 && (
-                <>
-                  {" · staff: "}
-                  {staff.map((d, i) => (
+            <div>
+              <h1 className="text-3xl font-bold">{org.name}</h1>
+              {org.description && (
+                <p className="text-gray-700 mt-2 max-w-2xl">{org.description}</p>
+              )}
+              <p className="text-sm text-gray-500 mt-2">
+                {memberCount} member{memberCount === 1 ? "" : "s"}
+                {staff.length > 0 && (
+                  <> · staff: {staff.map((d, i) => (
                     <span key={d.id}>
                       {i > 0 && ", "}
                       <Link href={`/profile/${d.id}`} className="hover:text-brand hover:underline">
                         {d.full_name ?? d.email.split("@")[0]}
                       </Link>
                     </span>
+                  ))}</>
+                )}
+              </p>
+              {tags.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {tags.map((tag) => (
+                    <span key={tag} className={`text-xs px-2 py-0.5 rounded-full ${tagPill(tag)}`}>
+                      {tagLabel(tag)}
+                    </span>
                   ))}
-                </>
+                </div>
               )}
-            </p>
-            {tags.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mt-2">
-                {tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className={`text-xs px-2 py-0.5 rounded-full ${tagPill(tag)}`}
-                  >
-                    {tagLabel(tag)}
-                  </span>
-                ))}
-              </div>
-            )}
+            </div>
           </div>
 
           <div className="flex flex-col gap-2 shrink-0">
-            <JoinLeaveButton
-              orgId={org.id}
-              isMember={isMember}
-              isPending={isPending}
-              isDirector={isDirector}
-            />
+            <JoinLeaveButton orgId={org.id} isMember={isMember} isPending={isPending} isDirector={isDirector} />
             {canManage && (
               <Link
                 href={`/orgs/${org.slug}/meetings/new`}
@@ -170,15 +183,20 @@ export default async function OrgProfilePage({
               currentName={org.name}
               currentDescription={org.description}
               currentTags={tags}
+              currentLogoUrl={org.logo_url}
             />
-            <InviteLink
-              orgId={org.id}
-              orgSlug={org.slug}
-              existingCode={existingInvite?.code ?? null}
-            />
+            <InviteLink orgId={org.id} orgSlug={org.slug} existingCode={existingInvite?.code ?? null} />
           </div>
         )}
       </div>
+
+      <Affiliations
+        orgId={org.id}
+        orgSlug={org.slug}
+        affiliated={affiliated}
+        allOrgs={allOrgsList}
+        isDirector={isDirector}
+      />
 
       {pendingForDirector.length > 0 && (
         <PendingMembers orgId={org.id} members={pendingForDirector} />
@@ -192,8 +210,7 @@ export default async function OrgProfilePage({
         <h2 className="text-xl font-semibold mb-3">Upcoming meetings</h2>
         {!meetings || meetings.length === 0 ? (
           <div className="border border-dashed border-gray-300 rounded-lg p-6 text-center text-gray-600 text-sm">
-            No meetings scheduled.
-            {canManage && " Officers or STAFF can add one."}
+            No meetings scheduled.{canManage && " Officers or STAFF can add one."}
           </div>
         ) : (
           <ul className="space-y-2">

@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
+import { BulletinCarousel } from "./_bulletin-carousel";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -7,14 +9,34 @@ export default async function DashboardPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) return null; // Layout redirects; this is just for TS.
+  if (!user) return null;
 
-  const { data: memberships } = await supabase
-    .from("org_members")
-    .select("role, orgs(id, slug, name, description)")
-    .eq("user_id", user.id);
+  const svc = createServiceClient();
+
+  const [{ data: memberships }, { data: bulletinPosts }] = await Promise.all([
+    supabase
+      .from("org_members")
+      .select("role, orgs(id, slug, name, description)")
+      .eq("user_id", user.id),
+    svc
+      .from("bulletin_posts")
+      .select("id, event_title, event_description, event_at, event_location, orgs(name)")
+      .eq("status", "approved")
+      .gte("event_at", new Date().toISOString())
+      .order("event_at", { ascending: true })
+      .limit(10),
+  ]);
 
   const orgCount = memberships?.length ?? 0;
+
+  const carouselPosts = (bulletinPosts ?? []).map((p) => ({
+    id: p.id,
+    event_title: p.event_title,
+    event_description: p.event_description ?? null,
+    event_at: p.event_at,
+    event_location: p.event_location ?? null,
+    org_name: (p.orgs as { name: string } | null)?.name ?? null,
+  }));
 
   return (
     <div className="space-y-8">
@@ -24,6 +46,13 @@ export default async function DashboardPage() {
           Signed in as {user.email}.
         </p>
       </section>
+
+      {carouselPosts.length > 0 && (
+        <section>
+          <h2 className="text-base font-semibold text-gray-700 mb-2">📢 Upcoming bulletin events</h2>
+          <BulletinCarousel posts={carouselPosts} />
+        </section>
+      )}
 
       <section>
         <div className="flex items-center justify-between mb-4">
@@ -52,7 +81,6 @@ export default async function DashboardPage() {
         ) : (
           <ul className="grid sm:grid-cols-2 gap-4">
             {memberships?.map((m) => {
-              // Supabase types will make this cleaner once you run `npm run db:types`
               const org = m.orgs as unknown as {
                 id: string;
                 slug: string;
@@ -108,11 +136,11 @@ export default async function DashboardPage() {
           </p>
         </Link>
         <Link
-          href="/bulletin"
+          href="/map"
           className="border border-gray-200 rounded-lg p-4 hover:border-brand hover:shadow transition"
         >
-          <h3 className="font-semibold">Bulletin board</h3>
-          <p className="text-sm text-gray-500 mt-1">Post big campus events</p>
+          <h3 className="font-semibold">Campus map</h3>
+          <p className="text-sm text-gray-500 mt-1">Meetings near you</p>
         </Link>
       </section>
       <p className="text-xs text-gray-400 text-center pt-4 border-t border-gray-100">
@@ -121,4 +149,3 @@ export default async function DashboardPage() {
     </div>
   );
 }
-

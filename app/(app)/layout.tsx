@@ -67,6 +67,8 @@ export default async function AppLayout({
             <NavLink href="/dashboard">Dashboard</NavLink>
             <NavLink href="/orgs">Orgs</NavLink>
             <NavLink href="/requests" badge={requestBadge}>Requests</NavLink>
+            <NavLink href="/messages">Messages</NavLink>
+            <NavLink href="/map">Map</NavLink>
             <NavLink href="/bulletin">Bulletin</NavLink>
             <NavLink href="/calendar">Calendar</NavLink>
             {profile?.is_site_admin && (
@@ -97,6 +99,8 @@ export default async function AppLayout({
                 { href: "/dashboard", label: "Dashboard" },
                 { href: "/orgs", label: "Orgs" },
                 { href: "/requests", label: "Requests" },
+                { href: "/messages", label: "Messages" },
+                { href: "/map", label: "Map" },
                 { href: "/bulletin", label: "Bulletin" },
                 { href: "/calendar", label: "Calendar" },
               ]}
