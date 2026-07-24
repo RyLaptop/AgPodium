@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { EditProfileForm } from "./_edit-profile";
 import { UserAvatar } from "@/components/user-avatar";
 import { MessageButton } from "./_message-button";
+import { DeleteAccountButton } from "./_delete-account";
 
 export const dynamic = "force-dynamic";
 
@@ -135,9 +136,12 @@ export default async function ProfilePage({
         </section>
       )}
 
-      <p className="text-xs text-gray-400">
-        Member since {new Date(profile.created_at).toLocaleDateString()}
-      </p>
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-gray-400">
+          Member since {new Date(profile.created_at).toLocaleDateString()}
+        </p>
+        {isSelf && <DeleteAccountButton />}
+      </div>
     </div>
   );
 }
