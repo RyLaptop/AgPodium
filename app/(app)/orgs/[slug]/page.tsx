@@ -49,7 +49,7 @@ export default async function OrgProfilePage({
   const [{ data: members }, { data: meetings }, { data: existingInvite }, { data: affiliatedRows }, { data: allOrgs }, { data: cohostInviteRows }] =
     await Promise.all([
       svc.from("org_members").select("role, status, title, users(id, full_name, email)").eq("org_id", org.id),
-      supabase.from("meetings")
+      svc.from("meetings")
         .select("id, title, starts_at, location, slots_open, cancelled_at")
         .eq("org_id", org.id)
         .gte("starts_at", new Date().toISOString())
