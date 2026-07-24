@@ -3,14 +3,17 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { requestDm } from "@/app/(app)/messages/actions";
+import { useAuthGate } from "@/app/(app)/_auth-gate";
 
 export function MessageButton({ targetUserId }: { targetUserId: string }) {
   const [open, setOpen] = useState(false);
   const [msg, setMsg] = useState("");
   const [pending, startTransition] = useTransition();
   const router = useRouter();
+  const { isAuthed, open: openAuthModal } = useAuthGate();
 
   const send = () => {
+    if (!isAuthed) { openAuthModal(); return; }
     if (!msg.trim()) return;
     startTransition(async () => {
       const res = await requestDm(targetUserId, msg.trim());
@@ -22,7 +25,7 @@ export function MessageButton({ targetUserId }: { targetUserId: string }) {
   if (!open) {
     return (
       <button
-        onClick={() => setOpen(true)}
+        onClick={() => { if (!isAuthed) { openAuthModal(); return; } setOpen(true); }}
         className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 hover:border-brand hover:text-brand transition"
       >
         ✉️ Message

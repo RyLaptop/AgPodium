@@ -61,7 +61,7 @@ export default async function ProfilePage({
         {!profile.bio && !profile.major && isSelf && (
           <p className="text-gray-400 mt-2 text-sm italic">Add your major and a bio so others know who you are.</p>
         )}
-        {!isSelf && user && (
+        {!isSelf && (
           <div className="mt-4">
             <MessageButton targetUserId={userId} />
           </div>

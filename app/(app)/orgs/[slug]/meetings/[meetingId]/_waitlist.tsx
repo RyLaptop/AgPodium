@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { joinWaitlist, leaveWaitlist } from "../actions";
+import { useAuthGate } from "@/app/(app)/_auth-gate";
 
 export function WaitlistButton({
   meetingId,
@@ -25,6 +26,18 @@ export function WaitlistButton({
   const [orgId, setOrgId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const { isAuthed, open } = useAuthGate();
+
+  if (!isAuthed) {
+    return (
+      <button
+        onClick={open}
+        className="w-full px-4 py-4 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-brand hover:text-brand transition text-sm"
+      >
+        Sign in to join the waitlist →
+      </button>
+    );
+  }
 
   const handleJoin = () => {
     if (pitch.trim().length < 5) {

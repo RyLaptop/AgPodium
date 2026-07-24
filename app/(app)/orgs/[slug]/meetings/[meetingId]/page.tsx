@@ -292,7 +292,7 @@ export default async function MeetingPage({
         />
       )}
 
-      {user && !isOfficer && inFuture && !isCancelled && slotsRemaining > 0 && (
+      {!isOfficer && inFuture && !isCancelled && slotsRemaining > 0 && (
         <section>
           <h2 className="text-xl font-semibold mb-3">Request a speaking slot</h2>
           {myExistingRequest ? (
@@ -318,7 +318,7 @@ export default async function MeetingPage({
         </section>
       )}
 
-      {user && !isOfficer && inFuture && !isCancelled && (slotsRemaining === 0 || onWaitlist) && !myExistingRequest && (
+      {!isOfficer && inFuture && !isCancelled && (slotsRemaining === 0 || onWaitlist) && !myExistingRequest && (
         <section>
           <h2 className="text-xl font-semibold mb-3">Waitlist</h2>
           <WaitlistButton

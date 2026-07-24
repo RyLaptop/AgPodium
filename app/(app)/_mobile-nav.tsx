@@ -14,7 +14,7 @@ export function MobileNav({
   links: { href: string; label: string }[];
   requestBadge: number;
   isAdmin: boolean;
-  userId: string;
+  userId: string | null;
   displayName: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -71,21 +71,42 @@ export function MobileNav({
           </nav>
 
           <div className="p-4 border-t border-gray-100 space-y-2">
-            <Link
-              href={`/profile/${userId}`}
-              onClick={close}
-              className="block w-full px-4 py-2.5 text-sm text-gray-700 hover:text-brand text-center"
-            >
-              {displayName} · View profile
-            </Link>
-            <form action={signOut}>
-              <button
-                type="submit"
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 hover:text-brand transition text-sm"
-              >
-                Sign out
-              </button>
-            </form>
+            {userId ? (
+              <>
+                <Link
+                  href={`/profile/${userId}`}
+                  onClick={close}
+                  className="block w-full px-4 py-2.5 text-sm text-gray-700 hover:text-brand text-center"
+                >
+                  {displayName} · View profile
+                </Link>
+                <form action={signOut}>
+                  <button
+                    type="submit"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 hover:text-brand transition text-sm"
+                  >
+                    Sign out
+                  </button>
+                </form>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  onClick={close}
+                  className="block w-full px-4 py-2.5 bg-brand text-white rounded-lg text-sm text-center font-medium hover:bg-brand-dark transition"
+                >
+                  Sign in
+                </Link>
+                <Link
+                  href="/signup"
+                  onClick={close}
+                  className="block w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm text-center text-gray-700 hover:bg-gray-50 transition"
+                >
+                  Create account
+                </Link>
+              </>
+            )}
           </div>
         </div>
       )}

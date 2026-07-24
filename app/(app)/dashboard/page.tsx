@@ -9,15 +9,15 @@ export default async function DashboardPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) return null;
-
   const svc = createServiceClient();
 
   const [{ data: memberships }, { data: bulletinPosts }] = await Promise.all([
-    supabase
-      .from("org_members")
-      .select("role, orgs(id, slug, name, description)")
-      .eq("user_id", user.id),
+    user
+      ? supabase
+          .from("org_members")
+          .select("role, orgs(id, slug, name, description)")
+          .eq("user_id", user.id)
+      : Promise.resolve({ data: [] }),
     svc
       .from("bulletin_posts")
       .select("id, event_title, event_description, event_at, event_location, orgs(name)")
@@ -41,9 +41,9 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-8">
       <section>
-        <h1 className="text-3xl font-bold">Welcome back.</h1>
+        <h1 className="text-3xl font-bold">{user ? "Welcome back." : "Welcome to AgPodium."}</h1>
         <p className="text-gray-600 mt-1">
-          Signed in as {user.email}.
+          {user ? `Signed in as ${user.email}.` : "Browse orgs, find meetings, and request speaking slots."}
         </p>
       </section>
 
@@ -65,7 +65,16 @@ export default async function DashboardPage() {
           </Link>
         </div>
 
-        {orgCount === 0 ? (
+        {!user ? (
+          <div className="border border-dashed border-gray-300 rounded-lg p-8 text-center space-y-3">
+            <p className="text-gray-600">Sign in to see your orgs and track your requests.</p>
+            <div className="flex gap-3 justify-center text-sm">
+              <Link href="/login" className="text-brand hover:underline">Sign in</Link>
+              <span className="text-gray-400">·</span>
+              <Link href="/signup" className="text-brand hover:underline">Create account</Link>
+            </div>
+          </div>
+        ) : orgCount === 0 ? (
           <div className="border border-dashed border-gray-300 rounded-lg p-8 text-center space-y-2">
             <p className="text-gray-600">You&apos;re not in any orgs yet.</p>
             <div className="flex gap-3 justify-center text-sm">

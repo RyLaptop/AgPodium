@@ -10,6 +10,7 @@ import { PendingMembers } from "./_pending-members";
 import { ActiveMembers } from "./_active-members";
 import { EditOrgForm } from "./_edit-org";
 import { Affiliations } from "./_affiliations";
+import { AuthGatedLink } from "@/app/(app)/_auth-gate";
 
 export const dynamic = "force-dynamic";
 
@@ -165,12 +166,12 @@ export default async function OrgProfilePage({
           <div className="flex flex-col gap-2 shrink-0">
             <JoinLeaveButton orgId={org.id} isMember={isMember} isPending={isPending} isDirector={isDirector} />
             {canManage && (
-              <Link
+              <AuthGatedLink
                 href={`/orgs/${org.slug}/meetings/new`}
                 className="text-sm px-3 py-1.5 border border-gray-300 rounded-lg text-center hover:bg-gray-50"
               >
                 + New meeting
-              </Link>
+              </AuthGatedLink>
             )}
           </div>
         </div>

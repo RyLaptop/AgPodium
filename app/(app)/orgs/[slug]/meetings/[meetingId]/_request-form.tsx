@@ -5,6 +5,7 @@ import {
   createSpeakRequest,
   type CreateRequestResult,
 } from "@/app/(app)/requests/actions";
+import { useAuthGate } from "@/app/(app)/_auth-gate";
 
 export function SpeakRequestForm({
   meetingId,
@@ -17,11 +18,23 @@ export function SpeakRequestForm({
   maxMinutes: number;
   myOrgs: { id: string; name: string }[];
 }) {
+  const { isAuthed, open } = useAuthGate();
   const action = createSpeakRequest.bind(null, meetingId, orgSlug);
   const [state, formAction, pending] = useActionState<
     CreateRequestResult | null,
     FormData
   >(action, null);
+
+  if (!isAuthed) {
+    return (
+      <button
+        onClick={open}
+        className="w-full px-4 py-4 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-brand hover:text-brand transition text-sm"
+      >
+        Sign in to request a speaking slot →
+      </button>
+    );
+  }
 
   return (
     <form action={formAction} className="space-y-3">

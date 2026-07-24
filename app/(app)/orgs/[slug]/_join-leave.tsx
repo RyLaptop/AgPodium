@@ -3,6 +3,7 @@
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { joinOrg, leaveOrg } from "../actions";
+import { useAuthGate } from "@/app/(app)/_auth-gate";
 
 export function JoinLeaveButton({
   orgId,
@@ -17,6 +18,7 @@ export function JoinLeaveButton({
 }) {
   const [pending, startTransition] = useTransition();
   const router = useRouter();
+  const { isAuthed, open } = useAuthGate();
 
   if (isDirector) {
     const handleLeave = () => {
@@ -53,6 +55,7 @@ export function JoinLeaveButton({
   }
 
   const handleClick = () => {
+    if (!isAuthed) { open(); return; }
     startTransition(async () => {
       const res = isMember ? await leaveOrg(orgId) : await joinOrg(orgId);
       if (!res.ok) {

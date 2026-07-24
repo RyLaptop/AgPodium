@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { OrgSearch } from "./_search";
+import { AuthGatedLink } from "@/app/(app)/_auth-gate";
 
 export const dynamic = "force-dynamic";
 
@@ -76,12 +76,12 @@ export default async function OrgsPage() {
             Browse orgs, join, or request a speaking slot at their meetings.
           </p>
         </div>
-        <Link
+        <AuthGatedLink
           href="/orgs/new"
           className="px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand-dark text-sm shrink-0"
         >
           + Create org
-        </Link>
+        </AuthGatedLink>
       </div>
 
       <OrgSearch orgs={withCounts} />
