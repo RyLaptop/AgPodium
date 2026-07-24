@@ -46,10 +46,9 @@ export default async function MapPage() {
   if (orgIds.length > 0) {
     queries.push(
       svc.from("meetings")
-        .select("id, title, location, starts_at, org_id, orgs(name, slug), cancelled_at")
+        .select("id, title, location, starts_at, org_id, orgs(name, slug)")
         .in("org_id", orgIds)
         .gte("starts_at", new Date().toISOString())
-        .is("cancelled_at", null)
         .order("starts_at", { ascending: true })
         .limit(50) as unknown as Promise<{ data: unknown[] | null }>
     );
@@ -58,10 +57,9 @@ export default async function MapPage() {
   if (speakingMeetingIds.length > 0) {
     queries.push(
       svc.from("meetings")
-        .select("id, title, location, starts_at, org_id, orgs(name, slug), cancelled_at")
+        .select("id, title, location, starts_at, org_id, orgs(name, slug)")
         .in("id", speakingMeetingIds)
         .gte("starts_at", new Date().toISOString())
-        .is("cancelled_at", null)
         .order("starts_at", { ascending: true })
         .limit(50) as unknown as Promise<{ data: unknown[] | null }>
     );

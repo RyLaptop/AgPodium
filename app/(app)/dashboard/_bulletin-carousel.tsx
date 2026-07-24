@@ -28,9 +28,11 @@ export function BulletinCarousel({ posts }: { posts: Post[] }) {
   }
 
   const post = posts[idx];
+  const prev = () => setIdx((i) => (i - 1 + posts.length) % posts.length);
+  const next = () => setIdx((i) => (i + 1) % posts.length);
 
   return (
-    <div className="relative bg-gradient-to-r from-brand/5 to-brand/10 border border-brand/20 rounded-xl p-4">
+    <div className={`relative bg-gradient-to-r from-brand/5 to-brand/10 border border-brand/20 rounded-xl p-5 ${posts.length > 1 ? "pb-14" : ""}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <p className="text-xs font-semibold text-brand uppercase tracking-wide mb-1">
@@ -47,38 +49,31 @@ export function BulletinCarousel({ posts }: { posts: Post[] }) {
             <p className="text-xs text-gray-500 mt-1">{post.event_location}</p>
           )}
         </div>
-        <Link
-          href="/bulletin"
-          className="shrink-0 text-xs text-brand hover:underline"
-        >
+        <Link href="/bulletin" className="shrink-0 text-xs text-brand hover:underline">
           All events →
         </Link>
       </div>
 
       {posts.length > 1 && (
-        <div className="flex items-center gap-2 mt-3">
-          <button
-            onClick={() => setIdx((i) => (i - 1 + posts.length) % posts.length)}
-            className="text-gray-400 hover:text-brand text-xs px-1"
-          >
+        <div className="absolute bottom-3 left-0 right-0 flex items-center justify-center gap-3">
+          <button onClick={prev} aria-label="Previous"
+            className="w-8 h-8 flex items-center justify-center text-2xl text-gray-400 hover:text-brand transition leading-none">
             ‹
           </button>
-          <div className="flex gap-1">
+          <div className="flex gap-2 items-center">
             {posts.map((_, i) => (
               <button
                 key={i}
                 onClick={() => setIdx(i)}
-                className={`w-1.5 h-1.5 rounded-full transition-colors ${i === idx ? "bg-brand" : "bg-gray-300"}`}
+                aria-label={`Go to slide ${i + 1}`}
+                className={`rounded-full transition-all ${i === idx ? "w-3 h-3 bg-brand" : "w-2.5 h-2.5 bg-gray-300 hover:bg-gray-400"}`}
               />
             ))}
           </div>
-          <button
-            onClick={() => setIdx((i) => (i + 1) % posts.length)}
-            className="text-gray-400 hover:text-brand text-xs px-1"
-          >
+          <button onClick={next} aria-label="Next"
+            className="w-8 h-8 flex items-center justify-center text-2xl text-gray-400 hover:text-brand transition leading-none">
             ›
           </button>
-          <span className="text-xs text-gray-400 ml-auto">{idx + 1} / {posts.length}</span>
         </div>
       )}
     </div>

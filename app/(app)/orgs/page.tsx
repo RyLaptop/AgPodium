@@ -27,7 +27,6 @@ export default async function OrgsPage() {
     svc.from("meetings")
       .select("org_id, starts_at")
       .gte("starts_at", new Date().toISOString())
-      .is("cancelled_at", null)
       .order("starts_at", { ascending: true }),
   ]);
 
@@ -36,13 +35,22 @@ export default async function OrgsPage() {
     countByOrg.set(m.org_id, (countByOrg.get(m.org_id) ?? 0) + 1);
   }
 
+  const DAY_NAMES = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  function meetingDayCT(starts_at: string): number {
+    const dayStr = new Intl.DateTimeFormat("en-US", {
+      weekday: "long",
+      timeZone: "America/Chicago",
+    }).format(new Date(starts_at));
+    return DAY_NAMES.indexOf(dayStr);
+  }
+
   // First upcoming meeting per org
   const nextMeetingByOrg = new Map<string, { at: string; day: number }>();
   for (const m of upcomingMeetings ?? []) {
     if (!nextMeetingByOrg.has(m.org_id)) {
       nextMeetingByOrg.set(m.org_id, {
         at: m.starts_at,
-        day: new Date(m.starts_at).getDay(),
+        day: meetingDayCT(m.starts_at),
       });
     }
   }

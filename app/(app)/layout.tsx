@@ -5,6 +5,7 @@ import { signOut } from "@/app/auth/actions";
 import { NotificationBell, type Notification } from "./_notification-bell";
 import { UserAvatar } from "@/components/user-avatar";
 import { MobileNav } from "./_mobile-nav";
+import { NavLink } from "./_nav-link";
 
 export default async function AppLayout({
   children,
@@ -120,24 +121,3 @@ export default async function AppLayout({
   );
 }
 
-function NavLink({
-  href,
-  children,
-  badge,
-}: {
-  href: string;
-  children: React.ReactNode;
-  badge?: number;
-}) {
-  return (
-    <Link
-      href={href}
-      className="relative px-3 py-2 text-gray-700 hover:text-brand rounded"
-    >
-      {children}
-      {badge != null && badge > 0 && (
-        <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
-      )}
-    </Link>
-  );
-}
