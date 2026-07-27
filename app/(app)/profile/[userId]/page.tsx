@@ -19,7 +19,7 @@ export default async function ProfilePage({
   const svc = createServiceClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  const [{ data: profile }, { data: memberships }, { data: recentSpeaks }] =
+  const [{ data: profile }, { data: memberships }, { data: recentSpeaks }, { data: dmThread }] =
     await Promise.all([
       svc
         .from("users")
@@ -38,6 +38,13 @@ export default async function ProfilePage({
         .eq("status", "completed")
         .order("created_at", { ascending: false })
         .limit(5),
+      user
+        ? svc
+            .from("dm_threads")
+            .select("id, status")
+            .or(`and(user_a.eq.${user.id},user_b.eq.${userId}),and(user_a.eq.${userId},user_b.eq.${user.id})`)
+            .maybeSingle()
+        : { data: null },
     ]);
 
   if (!profile) notFound();
@@ -65,7 +72,11 @@ export default async function ProfilePage({
         )}
         {!isSelf && (
           <div className="mt-4">
-            <MessageButton targetUserId={userId} />
+            <MessageButton
+              targetUserId={userId}
+              existingThreadId={dmThread?.id ?? null}
+              existingStatus={(dmThread?.status as "pending" | "accepted" | "declined" | null) ?? null}
+            />
           </div>
         )}
         {isSelf && (

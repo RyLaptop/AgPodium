@@ -1,11 +1,20 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { requestDm } from "@/app/(app)/messages/actions";
 import { useAuthGate } from "@/app/(app)/_auth-gate";
 
-export function MessageButton({ targetUserId }: { targetUserId: string }) {
+export function MessageButton({
+  targetUserId,
+  existingThreadId,
+  existingStatus,
+}: {
+  targetUserId: string;
+  existingThreadId: string | null;
+  existingStatus: "pending" | "accepted" | "declined" | null;
+}) {
   const [open, setOpen] = useState(false);
   const [msg, setMsg] = useState("");
   const [pending, startTransition] = useTransition();
@@ -21,6 +30,28 @@ export function MessageButton({ targetUserId }: { targetUserId: string }) {
       router.push(`/messages/${res.threadId}`);
     });
   };
+
+  if (existingStatus === "accepted" && existingThreadId) {
+    return (
+      <Link
+        href={`/messages/${existingThreadId}`}
+        className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 hover:border-brand hover:text-brand transition"
+      >
+        ✉️ Message
+      </Link>
+    );
+  }
+
+  if (existingStatus === "pending") {
+    return (
+      <button
+        disabled
+        className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-400 cursor-default"
+      >
+        ✉️ Message pending
+      </button>
+    );
+  }
 
   if (!open) {
     return (
