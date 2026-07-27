@@ -66,7 +66,7 @@ export default async function AppLayout({
   return (
     <AuthGateProvider isAuthed={!!user}>
       <div className="min-h-screen flex flex-col">
-        <header className="border-b border-gray-100 bg-white/95 backdrop-blur-sm sticky top-0 z-40">
+        <header className="border-b border-gray-100 bg-white sticky top-0 z-40">
           <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
             <Link href="/dashboard" className="flex items-center gap-2 shrink-0">
               <svg width="26" height="26" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
