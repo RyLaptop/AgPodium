@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -171,11 +170,10 @@ export default async function OrgProfilePage({
         <div className="mt-4 flex items-start justify-between gap-4">
           <div className="flex items-start gap-4">
             {org.logo_url && (
-              <Image
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
                 src={org.logo_url}
                 alt={org.name}
-                width={64}
-                height={64}
                 className="w-16 h-16 rounded-full object-cover border border-gray-200 shrink-0"
               />
             )}

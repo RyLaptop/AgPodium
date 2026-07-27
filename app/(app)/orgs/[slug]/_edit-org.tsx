@@ -2,7 +2,6 @@
 
 import { useState, useTransition, useRef } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { updateOrg, uploadOrgLogo } from "../actions";
 import { ORG_TAGS, TAG_COLORS, tagLabel } from "../_tag-colors";
 
@@ -79,7 +78,8 @@ export function EditOrgForm({
         <p className="text-sm font-medium mb-2">Logo</p>
         <div className="flex items-center gap-3">
           {logoPreview ? (
-            <Image src={logoPreview} alt="Logo preview" width={48} height={48}
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={logoPreview} alt="Logo preview"
               className="w-12 h-12 rounded-full object-cover border border-gray-200" />
           ) : (
             <div className="w-12 h-12 rounded-full bg-brand/10 flex items-center justify-center border border-gray-200">
