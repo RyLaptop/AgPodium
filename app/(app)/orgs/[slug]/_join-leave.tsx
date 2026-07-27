@@ -32,7 +32,7 @@ export function JoinLeaveButton({
 
     return (
       <div className="flex items-center gap-2">
-        <span className="text-sm px-3 py-1.5 bg-maroon-100 text-maroon-700 font-medium rounded-lg">
+        <span className="text-sm px-3 py-1.5 bg-brand/10 text-brand-dark font-medium rounded-lg">
           STAFF
         </span>
         <button

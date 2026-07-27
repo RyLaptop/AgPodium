@@ -106,7 +106,7 @@ export default async function DashboardPage() {
                       <h3 className="font-semibold">{org.name}</h3>
                       <span className={`text-xs px-2 py-0.5 rounded font-medium ${
                         m.role === "director"
-                          ? "bg-maroon-100 text-maroon-700"
+                          ? "bg-brand/10 text-brand-dark"
                           : "bg-gray-100 text-gray-600"
                       }`}>
                         {m.role === "director" ? "STAFF" : m.role === "officer" ? "Officer" : "Member"}

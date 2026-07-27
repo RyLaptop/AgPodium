@@ -8,19 +8,19 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // TAMU maroon-flavored palette (rename freely once you have branding)
         brand: {
-          DEFAULT: "#500000",
-          light: "#7a2020",
-          dark: "#360000",
+          DEFAULT: "#3B82F6",
+          light: "#60A5FA",
+          dark: "#2563EB",
         },
-        maroon: {
-          50:  "#fdf2f2",
-          100: "#fce7e7",
-          200: "#f8c9c9",
-          700: "#500000",
-          800: "#360000",
+        cream: "#FAFAF8",
+        agslate: "#0F172A",
+        yellow: {
+          accent: "#EAB308",
         },
+      },
+      fontFamily: {
+        sans: ["var(--font-inter)", "system-ui", "-apple-system", "sans-serif"],
       },
     },
   },

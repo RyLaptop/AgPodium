@@ -84,7 +84,7 @@ function MemberRow({ orgId, member, isSelf }: { orgId: string; member: ActiveMem
         </div>
         <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
           <span className={`text-xs px-2 py-0.5 rounded ${
-            member.role === "director" ? "bg-maroon-100 text-maroon-700 font-medium"
+            member.role === "director" ? "bg-brand/10 text-brand-dark font-medium"
             : member.role === "officer" ? "bg-gray-100 text-gray-600"
             : "bg-gray-50 text-gray-500"
           }`}>

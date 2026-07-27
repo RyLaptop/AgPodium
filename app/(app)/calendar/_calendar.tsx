@@ -102,7 +102,7 @@ export function Calendar({ events }: { events: CalEvent[] }) {
                     key={idx}
                     className={`text-xs truncate px-1 rounded ${
                       e.type === "meeting"
-                        ? "bg-maroon-100 text-maroon-700"
+                        ? "bg-brand/10 text-brand-dark"
                         : "bg-blue-100 text-blue-700"
                     }`}
                   >
@@ -132,7 +132,7 @@ export function Calendar({ events }: { events: CalEvent[] }) {
               <li key={i} className="flex items-center gap-2 text-sm">
                 <span
                   className={`w-2 h-2 rounded-full shrink-0 ${
-                    e.type === "meeting" ? "bg-maroon-700" : "bg-blue-500"
+                    e.type === "meeting" ? "bg-brand" : "bg-blue-500"
                   }`}
                 />
                 <span className="text-gray-400 w-16 shrink-0 text-xs">
@@ -157,7 +157,7 @@ export function Calendar({ events }: { events: CalEvent[] }) {
 
       <div className="flex gap-4 text-xs text-gray-500 pt-1">
         <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-sm bg-maroon-100 border border-maroon-200 inline-block" />
+          <span className="w-3 h-3 rounded-sm bg-brand/10 border border-brand/20 inline-block" />
           Org meetings
         </span>
         <span className="flex items-center gap-1.5">

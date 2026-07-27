@@ -66,10 +66,20 @@ export default async function AppLayout({
   return (
     <AuthGateProvider isAuthed={!!user}>
       <div className="min-h-screen flex flex-col">
-        <header className="border-b border-gray-200 bg-white sticky top-0 z-40">
+        <header className="border-b border-gray-100 bg-white/95 backdrop-blur-sm sticky top-0 z-40">
           <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-            <Link href="/dashboard" className="font-bold text-brand text-lg shrink-0">
-              AgPodium
+            <Link href="/dashboard" className="flex items-center gap-2 shrink-0">
+              <svg width="26" height="26" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="40" cy="10" r="4.5" fill="#3B82F6"/>
+                <line x1="40" y1="14.5" x2="40" y2="22" stroke="#3B82F6" strokeWidth="2.5" strokeLinecap="round"/>
+                <path d="M14 22 L66 22 L60 36 L20 36 Z" fill="#0F172A"/>
+                <line x1="26" y1="30" x2="54" y2="30" stroke="#3B82F6" strokeWidth="1.5" strokeLinecap="round"/>
+                <path d="M30 36 L50 36 L47 62 L33 62 Z" fill="#0F172A"/>
+                <path d="M22 62 L58 62 L60 70 L20 70 Z" fill="#0F172A"/>
+              </svg>
+              <span className="font-bold text-[17px]" style={{ letterSpacing: "-0.025em" }}>
+                <span className="text-slate-900">Ag</span><span className="text-brand">Podium</span>
+              </span>
             </Link>
 
             {/* Desktop nav */}

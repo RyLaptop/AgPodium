@@ -110,7 +110,7 @@ export default async function ProfilePage({
                       <span
                         className={`text-xs px-1.5 py-0.5 rounded ${
                           m.role === "director"
-                            ? "bg-maroon-100 text-maroon-700 font-medium"
+                            ? "bg-brand/10 text-brand-dark font-medium"
                             : "bg-gray-100 text-gray-600"
                         }`}
                       >

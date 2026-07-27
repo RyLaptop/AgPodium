@@ -103,7 +103,7 @@ export function MapClient({ meetings }: { meetings: MapMeeting[] }) {
           .addTo(map)
           .bindPopup(
             `<div style="min-width:180px">${popupContent}
-             <a href="${mapsUrl}" target="_blank" style="color:#500000;font-size:12px">Open in Google Maps →</a></div>`
+             <a href="${mapsUrl}" target="_blank" style="color:#3B82F6;font-size:12px">Open in Google Maps →</a></div>`
           );
       }
     });
