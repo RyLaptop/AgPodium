@@ -16,7 +16,8 @@ export function MakeRequest({ allOrgs }: { allOrgs: Org[] }) {
   const [orgSearch, setOrgSearch] = useState("");
   const [selectedOrgIds, setSelectedOrgIds] = useState<string[]>([]);
   const [meetings, setMeetings] = useState<Meeting[]>([]);
-  const [selectedMeetingIds, setSelectedMeetingIds] = useState<Record<string, string>>({});
+  // org_id -> array of selected meeting IDs
+  const [selectedMeetingIds, setSelectedMeetingIds] = useState<Record<string, string[]>>({});
   const [pitch, setPitch] = useState("");
   const [minutes, setMinutes] = useState(2);
   const [error, setError] = useState<string | null>(null);
@@ -51,6 +52,16 @@ export function MakeRequest({ allOrgs }: { allOrgs: Org[] }) {
     }
   };
 
+  const toggleMeeting = (orgId: string, meetingId: string) => {
+    setSelectedMeetingIds((prev) => {
+      const current = prev[orgId] ?? [];
+      const next = current.includes(meetingId)
+        ? current.filter((id) => id !== meetingId)
+        : [...current, meetingId];
+      return { ...prev, [orgId]: next };
+    });
+  };
+
   const goToMeetings = () => {
     if (selectedOrgIds.length === 0) return;
     setError(null);
@@ -66,10 +77,14 @@ export function MakeRequest({ allOrgs }: { allOrgs: Org[] }) {
     });
   };
 
+  const totalSelected = selectedOrgIds.reduce(
+    (sum, orgId) => sum + (selectedMeetingIds[orgId]?.length ?? 0),
+    0
+  );
+
   const goToPitch = () => {
-    const missingOrgs = selectedOrgIds.filter((id) => !selectedMeetingIds[id]);
-    if (missingOrgs.length > 0) {
-      setError("Please select a meeting for each org.");
+    if (totalSelected === 0) {
+      setError("Please select at least one meeting.");
       return;
     }
     setError(null);
@@ -79,9 +94,12 @@ export function MakeRequest({ allOrgs }: { allOrgs: Org[] }) {
   const submit = () => {
     if (pitch.trim().length < 5) { setError("Pitch must be at least 5 characters."); return; }
     setError(null);
-    const targets = selectedOrgIds
-      .filter((orgId) => selectedMeetingIds[orgId])
-      .map((orgId) => ({ meetingId: selectedMeetingIds[orgId], requesterOrgId: null }));
+    const targets = selectedOrgIds.flatMap((orgId) =>
+      (selectedMeetingIds[orgId] ?? []).map((meetingId) => ({
+        meetingId,
+        requesterOrgId: null,
+      }))
+    );
 
     startTransition(async () => {
       const res = await submitSpeakRequests(targets, pitch.trim(), minutes);
@@ -110,7 +128,7 @@ export function MakeRequest({ allOrgs }: { allOrgs: Org[] }) {
       <div className="flex items-center justify-between">
         <h3 className="font-semibold">
           {step === "orgs" && "Step 1 of 3: Select org"}
-          {step === "meetings" && "Step 2 of 3: Select meeting"}
+          {step === "meetings" && "Step 2 of 3: Select meetings"}
           {step === "pitch" && "Step 3 of 3: Your pitch"}
         </h3>
         <button onClick={close} className="text-gray-400 hover:text-gray-600 text-lg leading-none">✕</button>
@@ -152,9 +170,7 @@ export function MakeRequest({ allOrgs }: { allOrgs: Org[] }) {
                   type="button"
                   onClick={() => toggleOrg(o.id)}
                   className={`w-full text-left px-3 py-2 rounded-md text-sm transition ${
-                    selected
-                      ? "bg-brand text-white"
-                      : "hover:bg-gray-50 text-gray-800"
+                    selected ? "bg-brand text-white" : "hover:bg-gray-50 text-gray-800"
                   }`}
                 >
                   {o.name}
@@ -183,9 +199,11 @@ export function MakeRequest({ allOrgs }: { allOrgs: Org[] }) {
       {/* Step 2: Meeting selection */}
       {step === "meetings" && (
         <div className="space-y-4">
+          <p className="text-xs text-gray-500">Click to select — you can pick multiple meetings per org.</p>
           {selectedOrgIds.map((orgId) => {
             const org = orgById(orgId);
             const orgMeetings = meetingsForOrg(orgId);
+            const orgSelected = selectedMeetingIds[orgId] ?? [];
             return (
               <div key={orgId}>
                 <p className="text-sm font-medium text-gray-700 mb-1">{org?.name}</p>
@@ -194,12 +212,12 @@ export function MakeRequest({ allOrgs }: { allOrgs: Org[] }) {
                 ) : (
                   <div className="space-y-1">
                     {orgMeetings.map((m) => {
-                      const selected = selectedMeetingIds[orgId] === m.id;
+                      const selected = orgSelected.includes(m.id);
                       return (
                         <button
                           key={m.id}
                           type="button"
-                          onClick={() => setSelectedMeetingIds((prev) => ({ ...prev, [orgId]: m.id }))}
+                          onClick={() => toggleMeeting(orgId, m.id)}
                           className={`w-full text-left px-3 py-2 rounded-md text-sm border transition ${
                             selected
                               ? "border-brand bg-brand/5 text-brand"
@@ -223,16 +241,20 @@ export function MakeRequest({ allOrgs }: { allOrgs: Org[] }) {
 
           {error && <p className="text-sm text-red-600">{error}</p>}
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
             <button onClick={() => { setStep("orgs"); setError(null); }}
               className="px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
               ← Back
             </button>
             <button onClick={goToPitch}
-              className="px-4 py-2 bg-brand text-white rounded-lg text-sm hover:bg-brand-dark">
+              disabled={totalSelected === 0}
+              className="px-4 py-2 bg-brand text-white rounded-lg text-sm hover:bg-brand-dark disabled:opacity-50">
               Next →
             </button>
-            <button onClick={close} className="px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
+            {totalSelected > 0 && (
+              <span className="text-xs text-gray-500">{totalSelected} meeting{totalSelected !== 1 ? "s" : ""} selected</span>
+            )}
+            <button onClick={close} className="px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 ml-auto">
               Cancel
             </button>
           </div>
@@ -243,16 +265,17 @@ export function MakeRequest({ allOrgs }: { allOrgs: Org[] }) {
       {step === "pitch" && (
         <div className="space-y-3">
           <div className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2 space-y-0.5">
-            {selectedOrgIds.map((orgId) => {
+            {selectedOrgIds.flatMap((orgId) => {
               const org = orgById(orgId);
-              const meetingId = selectedMeetingIds[orgId];
-              const meeting = meetings.find((m) => m.id === meetingId);
-              return (
-                <p key={orgId}>
-                  <span className="font-medium text-gray-700">{org?.name}</span>
-                  {meeting && ` · ${meeting.title} (${new Date(meeting.starts_at).toLocaleDateString()})`}
-                </p>
-              );
+              return (selectedMeetingIds[orgId] ?? []).map((meetingId) => {
+                const m = meetings.find((m) => m.id === meetingId);
+                return (
+                  <p key={meetingId}>
+                    <span className="font-medium text-gray-700">{org?.name}</span>
+                    {m && ` · ${m.title} (${new Date(m.starts_at).toLocaleDateString()})`}
+                  </p>
+                );
+              });
             })}
           </div>
 
@@ -291,7 +314,7 @@ export function MakeRequest({ allOrgs }: { allOrgs: Org[] }) {
               disabled={pending}
               className="px-4 py-2 bg-brand text-white rounded-lg text-sm hover:bg-brand-dark disabled:opacity-60"
             >
-              {pending ? "Submitting…" : `Submit${selectedOrgIds.length > 1 ? ` (${selectedOrgIds.length} requests)` : ""}`}
+              {pending ? "Submitting…" : `Submit (${totalSelected} request${totalSelected !== 1 ? "s" : ""})`}
             </button>
             <button onClick={close} className="px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
               Cancel
