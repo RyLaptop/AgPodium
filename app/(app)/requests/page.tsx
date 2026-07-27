@@ -60,7 +60,7 @@ export default async function RequestsPage() {
       .in("status", ["pending", "approved", "disputed"])
       .order("created_at", { ascending: false }),
 
-    supabase
+    svc
       .from("org_members")
       .select("org_id, created_at, orgs(id, name, slug)")
       .eq("user_id", user.id)
