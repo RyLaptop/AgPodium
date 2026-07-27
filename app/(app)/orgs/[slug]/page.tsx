@@ -26,7 +26,7 @@ export default async function OrgProfilePage({
   const svc = createServiceClient();
   const { data: org } = await svc
     .from("orgs")
-    .select("id, slug, name, description, created_at, tags, logo_url, status")
+    .select("id, slug, name, description, created_at, tags, logo_url, status, contact_email")
     .eq("slug", slug)
     .single();
 
@@ -229,6 +229,7 @@ export default async function OrgProfilePage({
               currentDescription={org.description}
               currentTags={tags}
               currentLogoUrl={org.logo_url}
+              currentContactEmail={(org as unknown as { contact_email?: string | null }).contact_email ?? null}
             />
             <InviteLink orgId={org.id} orgSlug={org.slug} existingCode={existingInvite?.code ?? null} />
           </div>

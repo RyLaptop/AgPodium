@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { notify } from "@/lib/notifications";
+import { sendEmail } from "@/lib/email/send";
+import { bulletinDecisionEmail } from "@/lib/email/templates";
 
 export type SubmitBulletinResult =
   | { ok: true; id: string }
@@ -203,6 +205,11 @@ export async function reviewBulletinPost(
       body: post.event_title,
       link: "/bulletin",
     }]);
+    const { data: submitter } = await svc.from("users").select("email, full_name").eq("id", post.submitter_id).single();
+    if (submitter?.email) {
+      const tmpl = bulletinDecisionEmail({ recipientName: submitter.full_name ?? submitter.email.split("@")[0], eventTitle: post.event_title, approved: decision === "approved" });
+      await sendEmail({ to: submitter.email, ...tmpl });
+    }
   }
 
   revalidatePath("/bulletin");

@@ -12,6 +12,7 @@ export function EditOrgForm({
   currentDescription,
   currentTags,
   currentLogoUrl,
+  currentContactEmail,
 }: {
   orgId: string;
   orgSlug: string;
@@ -19,11 +20,13 @@ export function EditOrgForm({
   currentDescription: string | null;
   currentTags: string[];
   currentLogoUrl?: string | null;
+  currentContactEmail?: string | null;
 }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(currentName);
   const [description, setDescription] = useState(currentDescription ?? "");
   const [tags, setTags] = useState<string[]>(currentTags);
+  const [contactEmail, setContactEmail] = useState(currentContactEmail ?? "");
   const [logoPreview, setLogoPreview] = useState<string | null>(currentLogoUrl ?? null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -52,7 +55,7 @@ export function EditOrgForm({
         if (!logoRes.ok) { setError(logoRes.error); return; }
       }
 
-      const res = await updateOrg(orgId, orgSlug, { name, description, tags });
+      const res = await updateOrg(orgId, orgSlug, { name, description, tags, contactEmail: contactEmail.trim() || undefined });
       if (!res.ok) setError(res.error);
       else { setOpen(false); router.refresh(); }
     });
@@ -128,6 +131,18 @@ export function EditOrgForm({
           onChange={(e) => setDescription(e.target.value)}
           rows={3}
           className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand text-sm resize-none"
+        />
+      </label>
+
+      <label className="block">
+        <span className="text-sm font-medium">Contact email</span>
+        <p className="text-xs text-gray-500 mb-1">Receives emails for new speak requests and join requests to this org.</p>
+        <input
+          type="email"
+          value={contactEmail}
+          onChange={(e) => setContactEmail(e.target.value)}
+          placeholder="officers@myorg.tamu.edu"
+          className="mt-0.5 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand text-sm"
         />
       </label>
 

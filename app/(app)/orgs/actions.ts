@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { notify } from "@/lib/notifications";
+import { sendEmail } from "@/lib/email/send";
+import { orgJoinDecisionEmail, orgRoleChangedEmail, orgCreationDecisionEmail, orgIncomingJoinRequestEmail } from "@/lib/email/templates";
 
 export type CreateOrgResult =
   | { ok: true; slug: string }
@@ -98,6 +100,19 @@ export async function joinOrg(orgId: string) {
       body: `${myName} wants to join`,
       link: `/orgs/${org.slug}`,
     })));
+    // Also send to org contact email if set
+    const joinSvc = createServiceClient();
+    const { data: orgData } = await joinSvc.from("orgs").select("contact_email").eq("id", orgId).single();
+    const contactEmail = (orgData as unknown as { contact_email?: string | null } | null)?.contact_email;
+    if (contactEmail) {
+      const tmpl = orgIncomingJoinRequestEmail({
+        orgName: org.name,
+        requesterName: me?.full_name ?? user.email ?? "Someone",
+        requesterEmail: me?.email ?? user.email ?? "",
+        orgPath: `/orgs/${org.slug}`,
+      });
+      await sendEmail({ to: contactEmail, ...tmpl });
+    }
   }
 
   revalidatePath("/orgs");
@@ -136,9 +151,15 @@ export async function approveMember(orgId: string, userId: string) {
 
   if (error) return { ok: false as const, error: error.message };
 
+  const svc = createServiceClient();
   const { data: org } = await supabase.from("orgs").select("name, slug").eq("id", orgId).single();
   if (org) {
     await notify([{ userId, type: "org_member_request", title: `You're now a member of ${org.name}!`, link: `/orgs/${org.slug}` }]);
+    const { data: u } = await svc.from("users").select("email, full_name").eq("id", userId).single();
+    if (u?.email) {
+      const tmpl = orgJoinDecisionEmail({ recipientName: u.full_name ?? u.email.split("@")[0], orgName: org.name, approved: true, orgPath: `/orgs/${org.slug}` });
+      await sendEmail({ to: u.email, ...tmpl });
+    }
   }
 
   revalidatePath(`/orgs`);
@@ -161,6 +182,12 @@ export async function denyMember(orgId: string, userId: string) {
 
   if (org) {
     await notify([{ userId, type: "org_member_request", title: `Join request for ${org.name} was declined` }]);
+    const svc2 = createServiceClient();
+    const { data: u } = await svc2.from("users").select("email, full_name").eq("id", userId).single();
+    if (u?.email) {
+      const tmpl = orgJoinDecisionEmail({ recipientName: u.full_name ?? u.email.split("@")[0], orgName: org.name, approved: false, orgPath: `/orgs` });
+      await sendEmail({ to: u.email, ...tmpl });
+    }
   }
 
   revalidatePath(`/orgs`);
@@ -196,6 +223,11 @@ export async function promoteMember(orgId: string, userId: string) {
   const { data: org } = await supabase.from("orgs").select("name, slug").eq("id", orgId).single();
   if (org) {
     await notify([{ userId, type: "org_member_request", title: `You're now STAFF of ${org.name}!`, link: `/orgs/${org.slug}` }]);
+    const { data: u } = await svc.from("users").select("email, full_name").eq("id", userId).single();
+    if (u?.email) {
+      const tmpl = orgRoleChangedEmail({ recipientName: u.full_name ?? u.email.split("@")[0], orgName: org.name, promoted: true, orgPath: `/orgs/${org.slug}` });
+      await sendEmail({ to: u.email, ...tmpl });
+    }
   }
 
   revalidatePath(`/orgs`);
@@ -205,7 +237,7 @@ export async function promoteMember(orgId: string, userId: string) {
 export async function updateOrg(
   orgId: string,
   orgSlug: string,
-  data: { name: string; description: string; tags: string[] }
+  data: { name: string; description: string; tags: string[]; contactEmail?: string }
 ) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -227,7 +259,7 @@ export async function updateOrg(
   const svc = createServiceClient();
   const { error } = await svc
     .from("orgs")
-    .update({ name: data.name, description: data.description || null, tags: data.tags })
+    .update({ name: data.name, description: data.description || null, tags: data.tags, contact_email: data.contactEmail || null })
     .eq("id", orgId);
 
   if (error) return { ok: false as const, error: error.message };
@@ -264,6 +296,11 @@ export async function removeMember(orgId: string, targetUserId: string) {
   const { data: org } = await supabase.from("orgs").select("name").eq("id", orgId).single();
   if (org) {
     await notify([{ userId: targetUserId, type: "org_member_request", title: `You've been removed from ${org.name}` }]);
+    const { data: u } = await svc.from("users").select("email, full_name").eq("id", targetUserId).single();
+    if (u?.email) {
+      const tmpl = orgRoleChangedEmail({ recipientName: u.full_name ?? u.email.split("@")[0], orgName: org.name, promoted: false, orgPath: `/orgs` });
+      await sendEmail({ to: u.email, ...tmpl });
+    }
   }
 
   revalidatePath(`/orgs`);
@@ -495,6 +532,11 @@ export async function approveOrg(orgId: string) {
     .select("user_id").eq("org_id", orgId).eq("role", "director").eq("status", "active").limit(1).single();
   if (founder && org) {
     await notify([{ userId: founder.user_id, type: "org_member_request", title: `Your org "${org.name}" has been approved!`, link: `/orgs/${org.slug}` }]);
+    const { data: founderUser } = await svc.from("users").select("email, full_name").eq("id", founder.user_id).single();
+    if (founderUser?.email) {
+      const tmpl = orgCreationDecisionEmail({ recipientName: founderUser.full_name ?? founderUser.email.split("@")[0], orgName: org.name, approved: true, orgPath: `/orgs/${org.slug}` });
+      await sendEmail({ to: founderUser.email, ...tmpl });
+    }
   }
 
   revalidatePath("/bulletin/admin");
@@ -518,6 +560,11 @@ export async function rejectOrg(orgId: string, reason: string) {
     .select("user_id").eq("org_id", orgId).eq("role", "director").eq("status", "active").limit(1).single();
   if (founder && org) {
     await notify([{ userId: founder.user_id, type: "org_member_request", title: `Org request for "${org.name}" was declined`, body: reason || undefined }]);
+    const { data: founderUser } = await svc.from("users").select("email, full_name").eq("id", founder.user_id).single();
+    if (founderUser?.email) {
+      const tmpl = orgCreationDecisionEmail({ recipientName: founderUser.full_name ?? founderUser.email.split("@")[0], orgName: org.name, approved: false, reason });
+      await sendEmail({ to: founderUser.email, ...tmpl });
+    }
   }
 
   revalidatePath("/bulletin/admin");

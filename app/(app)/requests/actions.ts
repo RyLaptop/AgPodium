@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { notify } from "@/lib/notifications";
+import { sendEmail } from "@/lib/email/send";
+import { speakDecisionEmail, waitlistPromotedEmail, orgIncomingSpeakRequestEmail } from "@/lib/email/templates";
 
 export type CreateRequestResult =
   | { ok: true; id: string }
@@ -74,15 +76,23 @@ export async function submitSpeakRequests(
   ]);
 
   const requesterName = me?.full_name ?? user.email ?? "Someone";
+  // requester's org name (if submitting on behalf of an org)
+  const requesterOrgId = targets[0]?.requesterOrgId ?? null;
+  const requesterOrgName = requesterOrgId
+    ? await svc.from("orgs").select("name").eq("id", requesterOrgId).single().then((r) => r.data?.name ?? null)
+    : null;
+  const firstPitch = targets.length > 0 ? rows[0].pitch : "";
+
   for (const m of meetingRows ?? []) {
     const orgName = (m.orgs as unknown as { name: string; slug: string } | null)?.name ?? "";
     const orgSlug = (m.orgs as unknown as { name: string; slug: string } | null)?.slug ?? "";
-    const { data: officers } = await svc
-      .from("org_members")
-      .select("user_id")
-      .eq("org_id", m.org_id)
-      .in("role", ["officer", "director"])
-      .eq("status", "active");
+    const meetingPath = orgSlug ? `/orgs/${orgSlug}/meetings/${m.id}` : "/requests";
+
+    const [{ data: officers }, { data: orgData }] = await Promise.all([
+      svc.from("org_members").select("user_id").eq("org_id", m.org_id).in("role", ["officer", "director"]).eq("status", "active"),
+      svc.from("orgs").select("contact_email").eq("id", m.org_id).single(),
+    ]);
+
     if (officers && officers.length > 0) {
       await notify(
         officers.map((o) => ({
@@ -90,9 +100,22 @@ export async function submitSpeakRequests(
           type: "request_update" as const,
           title: `New speak request: ${m.title}`,
           body: `${requesterName}${orgName ? ` (${orgName})` : ""} wants to speak`,
-          link: orgSlug ? `/orgs/${orgSlug}/meetings/${m.id}` : "/requests",
+          link: meetingPath,
         }))
       );
+    }
+
+    const contactEmail = (orgData as unknown as { contact_email?: string | null } | null)?.contact_email;
+    if (contactEmail) {
+      const tmpl = orgIncomingSpeakRequestEmail({
+        orgName,
+        requesterName,
+        requesterOrgName,
+        meetingTitle: m.title,
+        pitch: firstPitch,
+        meetingPath,
+      });
+      await sendEmail({ to: contactEmail, ...tmpl });
     }
   }
 
@@ -159,12 +182,11 @@ export async function createSpeakRequest(
   if (meeting) {
     const orgName = (meeting.orgs as unknown as { name: string } | null)?.name ?? "";
     const requesterName = me?.full_name ?? user.email ?? "Someone";
-    const { data: officers } = await supabase
-      .from("org_members")
-      .select("user_id")
-      .eq("org_id", meeting.org_id)
-      .in("role", ["officer", "director"])
-      .eq("status", "active");
+    const svc2 = createServiceClient();
+    const [{ data: officers }, { data: orgContact }] = await Promise.all([
+      supabase.from("org_members").select("user_id").eq("org_id", meeting.org_id).in("role", ["officer", "director"]).eq("status", "active"),
+      svc2.from("orgs").select("contact_email, slug").eq("id", meeting.org_id).single(),
+    ]);
     if (officers && officers.length > 0) {
       await notify(officers.map((o) => ({
         userId: o.user_id,
@@ -173,6 +195,19 @@ export async function createSpeakRequest(
         body: `${requesterName}${orgName ? ` (${orgName})` : ""} wants to speak`,
         link: `/requests/${data.id}`,
       })));
+    }
+    const orgContactEmail = (orgContact as unknown as { contact_email?: string | null; slug?: string } | null)?.contact_email;
+    const orgSlugReal = (orgContact as unknown as { contact_email?: string | null; slug?: string } | null)?.slug ?? orgSlug;
+    if (orgContactEmail) {
+      const tmpl = orgIncomingSpeakRequestEmail({
+        orgName,
+        requesterName,
+        requesterOrgName: requesterOrgId ? null : null,
+        meetingTitle: meeting.title,
+        pitch,
+        meetingPath: `/orgs/${orgSlugReal}/meetings/${meetingId}`,
+      });
+      await sendEmail({ to: orgContactEmail, ...tmpl });
     }
   }
 
@@ -267,6 +302,7 @@ export async function decideRequest(
   }
 
   // Notify requester of decision
+  const svc = createServiceClient();
   const { data: notifReq } = await supabase
     .from("speak_requests")
     .select("requester_user_id, meetings(title, orgs(name))")
@@ -281,6 +317,19 @@ export async function decideRequest(
       body: m ? `${m.orgs.name} · ${m.title}` : undefined,
       link: `/requests/${id}`,
     }]);
+    if (m) {
+      const { data: requester } = await svc.from("users").select("email, full_name").eq("id", notifReq.requester_user_id).single();
+      if (requester?.email) {
+        const tmpl = speakDecisionEmail({
+          recipientName: requester.full_name ?? requester.email.split("@")[0],
+          orgName: m.orgs.name,
+          meetingTitle: m.title,
+          approved: decision === "approved",
+          requestPath: `/requests/${id}`,
+        });
+        await sendEmail({ to: requester.email, ...tmpl });
+      }
+    }
   }
 
   revalidatePath("/requests");
@@ -466,6 +515,19 @@ export async function cancelApproved(id: string) {
       body: `${meeting.orgs.name} · ${meeting.title} — you're now approved to speak`,
       link: `/requests/${firstWaiter.id}`,
     }]);
+    const { data: waiterUser } = await admin.from("users").select("email, full_name").eq("id", firstWaiter.requester_user_id).single();
+    if (waiterUser?.email) {
+      const { data: meetingFull } = await admin.from("meetings").select("starts_at, location").eq("id", req.meeting_id).single();
+      const tmpl = waitlistPromotedEmail({
+        recipientName: waiterUser.full_name ?? waiterUser.email.split("@")[0],
+        orgName: meeting.orgs.name,
+        meetingTitle: meeting.title,
+        startsAt: meetingFull?.starts_at ?? new Date().toISOString(),
+        location: meetingFull?.location ?? null,
+        requestPath: `/requests/${firstWaiter.id}`,
+      });
+      await sendEmail({ to: waiterUser.email, ...tmpl });
+    }
   }
 
   revalidatePath(`/orgs/${meeting.orgs.slug}/meetings/${req.meeting_id}`);
