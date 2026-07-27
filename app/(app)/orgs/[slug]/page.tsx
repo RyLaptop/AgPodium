@@ -54,7 +54,7 @@ export default async function OrgProfilePage({
         .gte("starts_at", new Date().toISOString())
         .is("cancelled_at", null)
         .order("starts_at", { ascending: true })
-        .limit(10),
+        .limit(52),
       svc.from("org_invites").select("id, code").eq("org_id", org.id).maybeSingle(),
       svc.from("org_affiliations")
         .select("id, org_id, affiliate_org_id, status, requester_org:orgs!org_affiliations_org_id_fkey(id, slug, name), target_org:orgs!org_affiliations_affiliate_org_id_fkey(id, slug, name)")

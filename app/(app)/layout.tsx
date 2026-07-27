@@ -59,7 +59,7 @@ export default async function AppLayout({
     { href: "/requests", label: "Requests", requiresAuth: true },
     { href: "/messages", label: "Messages", requiresAuth: true },
     { href: "/map", label: "Map" },
-    { href: "/bulletin", label: "Bulletin" },
+    { href: "/bulletin", label: "Bulletin", excludePrefixes: ["/bulletin/admin"] },
     { href: "/calendar", label: "Calendar" },
   ];
 
@@ -75,7 +75,7 @@ export default async function AppLayout({
             {/* Desktop nav */}
             <nav className="hidden md:flex items-center gap-1 text-sm">
               {navLinks.map((l) => (
-                <NavLink key={l.href} href={l.href} badge={l.href === "/requests" ? requestBadge : undefined} requiresAuth={l.requiresAuth}>
+                <NavLink key={l.href} href={l.href} badge={l.href === "/requests" ? requestBadge : undefined} requiresAuth={l.requiresAuth} excludePrefixes={(l as { excludePrefixes?: string[] }).excludePrefixes}>
                   {l.label}
                 </NavLink>
               ))}

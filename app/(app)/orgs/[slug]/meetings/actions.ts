@@ -12,9 +12,19 @@ export type CreateMeetingResult =
 
 function addInterval(date: Date, type: string, n: number): Date {
   const d = new Date(date);
-  if (type === "weekly") d.setDate(d.getDate() + n * 7);
-  else if (type === "biweekly") d.setDate(d.getDate() + n * 14);
-  else if (type === "monthly") d.setMonth(d.getMonth() + n);
+  if (type === "weekly") {
+    d.setDate(d.getDate() + n * 7);
+  } else if (type === "biweekly") {
+    d.setDate(d.getDate() + n * 14);
+  } else if (type === "monthly") {
+    const originDay = date.getDate();
+    const targetMonth = date.getMonth() + n;
+    const targetYear = date.getFullYear() + Math.floor(targetMonth / 12);
+    const normalizedMonth = ((targetMonth % 12) + 12) % 12;
+    // Clamp to last day of target month so e.g. Jan 31 + 1mo = Feb 28, not Mar 3
+    const lastDayOfMonth = new Date(targetYear, normalizedMonth + 1, 0).getDate();
+    d.setFullYear(targetYear, normalizedMonth, Math.min(originDay, lastDayOfMonth));
+  }
   return d;
 }
 
@@ -32,7 +42,8 @@ export async function createMeeting(
   const slotsOpen = Number(formData.get("slots_open") ?? 3);
   const slotLength = Number(formData.get("slot_length_minutes") ?? 2);
   const repeatType = String(formData.get("repeat_type") ?? "none");
-  const repeatCount = Math.min(24, Math.max(2, Number(formData.get("repeat_count") ?? 4)));
+  const rawRepeatCount = formData.get("repeat_count");
+  const repeatCount = Math.min(52, Math.max(2, rawRepeatCount ? Number(rawRepeatCount) : 8));
   const cohostOrgIds = formData.getAll("cohost_org_id").map(String).filter(Boolean);
 
   if (title.length < 2) return { ok: false, error: "Title is too short." };
@@ -81,7 +92,7 @@ export async function createMeeting(
     ...(seriesId ? { series_id: seriesId } : {}),
   }));
 
-  const { data: inserted, error } = await supabase
+  const { data: inserted, error } = await svc
     .from("meetings")
     .insert(rows)
     .select("id")

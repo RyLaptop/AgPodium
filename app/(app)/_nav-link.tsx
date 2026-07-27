@@ -9,19 +9,25 @@ export function NavLink({
   children,
   badge,
   requiresAuth,
+  excludePrefixes,
 }: {
   href: string;
   children: React.ReactNode;
   badge?: number;
   requiresAuth?: boolean;
+  excludePrefixes?: string[];
 }) {
   const pathname = usePathname();
   const { isAuthed, open } = useAuthGate();
 
+  const isExcluded = (excludePrefixes ?? []).some(
+    (p) => pathname === p || pathname.startsWith(p + "/")
+  );
   const active =
-    href === "/dashboard"
+    !isExcluded &&
+    (href === "/dashboard"
       ? pathname === "/dashboard"
-      : pathname === href || pathname.startsWith(href + "/");
+      : pathname === href || pathname.startsWith(href + "/"));
 
   const cls = `relative px-3 py-2 rounded transition text-sm ${
     active ? "text-brand font-semibold bg-brand/5" : "text-gray-700 hover:text-brand"
