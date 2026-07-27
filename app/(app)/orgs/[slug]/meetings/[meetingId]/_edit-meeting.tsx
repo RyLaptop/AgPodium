@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { updateMeeting, deleteMeeting } from "../actions";
+import { updateMeeting, updateMeetingSeries, deleteMeeting, deleteMeetingSeries } from "../actions";
 
 function toLocal(iso: string) {
   const d = new Date(iso);
@@ -13,6 +13,7 @@ function toLocal(iso: string) {
 type Props = {
   meetingId: string;
   orgSlug: string;
+  seriesId?: string | null;
   title: string;
   startsAt: string;
   endsAt: string | null;
@@ -22,8 +23,9 @@ type Props = {
   slotLength: number;
 };
 
-export function EditMeeting({ meetingId, orgSlug, title, startsAt, endsAt, location, agenda, slotsOpen, slotLength }: Props) {
+export function EditMeeting({ meetingId, orgSlug, seriesId, title, startsAt, endsAt, location, agenda, slotsOpen, slotLength }: Props) {
   const [open, setOpen] = useState(false);
+  const [applyToSeries, setApplyToSeries] = useState(false);
   const [fields, setFields] = useState({
     title,
     startsAt: toLocal(startsAt),
@@ -43,25 +45,54 @@ export function EditMeeting({ meetingId, orgSlug, title, startsAt, endsAt, locat
   const submit = () => {
     setError(null);
     startTransition(async () => {
-      const res = await updateMeeting(meetingId, orgSlug, {
-        title: fields.title,
-        startsAt: fields.startsAt,
-        endsAt: fields.endsAt,
-        location: fields.location,
-        agenda: fields.agenda,
-        slotsOpen: Number(fields.slotsOpen),
-        slotLength: Number(fields.slotLength),
-      });
-      if (!res.ok) setError(res.error);
-      else { setOpen(false); router.refresh(); }
+      if (applyToSeries && seriesId) {
+        const res = await updateMeetingSeries(seriesId, orgSlug, {
+          title: fields.title,
+          location: fields.location,
+          agenda: fields.agenda,
+          slotsOpen: Number(fields.slotsOpen),
+          slotLength: Number(fields.slotLength),
+        });
+        if (!res.ok) { setError(res.error); return; }
+        // Also update this meeting's specific times
+        await updateMeeting(meetingId, orgSlug, {
+          title: fields.title,
+          startsAt: fields.startsAt,
+          endsAt: fields.endsAt,
+          location: fields.location,
+          agenda: fields.agenda,
+          slotsOpen: Number(fields.slotsOpen),
+          slotLength: Number(fields.slotLength),
+        });
+      } else {
+        const res = await updateMeeting(meetingId, orgSlug, {
+          title: fields.title,
+          startsAt: fields.startsAt,
+          endsAt: fields.endsAt,
+          location: fields.location,
+          agenda: fields.agenda,
+          slotsOpen: Number(fields.slotsOpen),
+          slotLength: Number(fields.slotLength),
+        });
+        if (!res.ok) { setError(res.error); return; }
+      }
+      setOpen(false);
+      router.refresh();
     });
   };
 
   const doDelete = () => {
-    if (!confirm("Permanently delete this meeting? This cannot be undone.")) return;
-    startTransition(async () => {
-      await deleteMeeting(meetingId, orgSlug);
-    });
+    if (applyToSeries && seriesId) {
+      if (!confirm("Permanently delete all meetings in this series? This cannot be undone.")) return;
+      startTransition(async () => {
+        await deleteMeetingSeries(seriesId, orgSlug);
+      });
+    } else {
+      if (!confirm("Permanently delete this meeting? This cannot be undone.")) return;
+      startTransition(async () => {
+        await deleteMeeting(meetingId, orgSlug);
+      });
+    }
   };
 
   if (!open) {
@@ -88,24 +119,38 @@ export function EditMeeting({ meetingId, orgSlug, title, startsAt, endsAt, locat
     <div className="border border-gray-200 rounded-lg p-4 space-y-4">
       <h3 className="font-semibold">Edit meeting</h3>
 
+      {seriesId && (
+        <label className="flex items-center gap-2 text-sm text-brand cursor-pointer">
+          <input
+            type="checkbox"
+            checked={applyToSeries}
+            onChange={(e) => setApplyToSeries(e.target.checked)}
+            className="rounded"
+          />
+          Apply changes to all meetings in this series
+        </label>
+      )}
+
       <label className="block">
         <span className="text-sm font-medium">Title</span>
         <input value={fields.title} onChange={set("title")}
           className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
       </label>
 
-      <div className="grid grid-cols-2 gap-3">
-        <label className="block">
-          <span className="text-sm font-medium">Start</span>
-          <input type="datetime-local" value={fields.startsAt} onChange={set("startsAt")}
-            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
-        </label>
-        <label className="block">
-          <span className="text-sm font-medium">End (optional)</span>
-          <input type="datetime-local" value={fields.endsAt} onChange={set("endsAt")}
-            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
-        </label>
-      </div>
+      {!applyToSeries && (
+        <div className="grid grid-cols-2 gap-3">
+          <label className="block">
+            <span className="text-sm font-medium">Start</span>
+            <input type="datetime-local" value={fields.startsAt} onChange={set("startsAt")}
+              className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium">End (optional)</span>
+            <input type="datetime-local" value={fields.endsAt} onChange={set("endsAt")}
+              className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
+          </label>
+        </div>
+      )}
 
       <label className="block">
         <span className="text-sm font-medium">Location</span>
@@ -134,7 +179,7 @@ export function EditMeeting({ meetingId, orgSlug, title, startsAt, endsAt, locat
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
         <button onClick={submit} disabled={pending}
           className="px-4 py-2 bg-brand text-white rounded-lg text-sm hover:bg-brand-dark disabled:opacity-60">
           {pending ? "Saving…" : "Save"}
@@ -142,6 +187,10 @@ export function EditMeeting({ meetingId, orgSlug, title, startsAt, endsAt, locat
         <button onClick={() => { setOpen(false); setError(null); }} disabled={pending}
           className="px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
           Cancel
+        </button>
+        <button onClick={doDelete} disabled={pending}
+          className="px-4 py-2 border border-red-300 text-red-600 rounded-lg text-sm hover:bg-red-50 disabled:opacity-60 ml-auto">
+          {applyToSeries ? "Delete entire series" : "Delete meeting"}
         </button>
       </div>
     </div>

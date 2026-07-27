@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { updateProfile } from "../actions";
+import { updateProfile, uploadAvatar } from "../actions";
 import { AVATAR_OPTIONS, UserAvatar } from "@/components/user-avatar";
 
 export function EditProfileForm({
@@ -16,19 +16,57 @@ export function EditProfileForm({
   currentMajor: string | null;
   currentAvatarUrl: string | null;
 }) {
+  const isPhoto = !!currentAvatarUrl?.startsWith("http");
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(currentName ?? "");
   const [bio, setBio] = useState(currentBio ?? "");
   const [major, setMajor] = useState(currentMajor ?? "");
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(currentAvatarUrl);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(isPhoto ? null : currentAvatarUrl);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(isPhoto ? currentAvatarUrl : null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const fileRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
+
+  const onPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoFile(file);
+    setPhotoPreview(URL.createObjectURL(file));
+    setAvatarUrl(null);
+  };
+
+  const clearPhoto = () => {
+    setPhotoPreview(null);
+    setPhotoFile(null);
+    if (fileRef.current) fileRef.current.value = "";
+  };
+
+  const selectEmoji = (key: string) => {
+    setAvatarUrl(avatarUrl === key ? null : key);
+    clearPhoto();
+  };
 
   const submit = () => {
     setError(null);
     startTransition(async () => {
-      const res = await updateProfile({ name, bio, major, avatarUrl });
+      let finalAvatarUrl: string | null;
+
+      if (photoFile) {
+        const fd = new FormData();
+        fd.append("avatar", photoFile);
+        const photoRes = await uploadAvatar(fd);
+        if (!photoRes.ok) { setError(photoRes.error); return; }
+        finalAvatarUrl = photoRes.url;
+      } else if (photoPreview && !photoFile) {
+        // Existing photo — keep the original URL
+        finalAvatarUrl = currentAvatarUrl;
+      } else {
+        finalAvatarUrl = avatarUrl;
+      }
+
+      const res = await updateProfile({ name, bio, major, avatarUrl: finalAvatarUrl });
       if (!res.ok) setError(res.error);
       else { setOpen(false); router.refresh(); }
     });
@@ -50,13 +88,38 @@ export function EditProfileForm({
       <h3 className="font-semibold">Edit profile</h3>
 
       <div>
+        <span className="text-sm font-medium block mb-2">Profile photo</span>
+        <div className="flex items-center gap-3">
+          {photoPreview ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={photoPreview} alt="Preview" className="w-10 h-10 rounded-full object-cover border border-gray-200" />
+          ) : (
+            <UserAvatar avatarUrl={avatarUrl} name={name || "?"} size="md" />
+          )}
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            className="text-sm px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50"
+          >
+            {photoPreview ? "Change photo" : "Upload photo"}
+          </button>
+          {photoPreview && (
+            <button type="button" onClick={clearPhoto} className="text-xs text-red-400 hover:text-red-600">
+              Remove
+            </button>
+          )}
+          <input ref={fileRef} type="file" accept="image/*" onChange={onPhotoChange} className="hidden" />
+        </div>
+      </div>
+
+      <div>
         <span className="text-sm font-medium block mb-2">Profile icon</span>
         <div className="flex flex-wrap gap-2">
           {AVATAR_OPTIONS.map((opt) => (
             <button
               key={opt.key}
               type="button"
-              onClick={() => setAvatarUrl(avatarUrl === opt.key ? null : opt.key)}
+              onClick={() => selectEmoji(opt.key)}
               title={opt.label}
               className={`w-10 h-10 rounded-full flex items-center justify-center text-xl transition ring-2 ${
                 avatarUrl === opt.key
@@ -67,7 +130,7 @@ export function EditProfileForm({
               {opt.key}
             </button>
           ))}
-          {avatarUrl && (
+          {avatarUrl && !photoPreview && (
             <button
               type="button"
               onClick={() => setAvatarUrl(null)}
@@ -78,7 +141,7 @@ export function EditProfileForm({
             </button>
           )}
         </div>
-        {avatarUrl && (
+        {avatarUrl && !photoPreview && (
           <p className="text-xs text-gray-400 mt-1">Click again to deselect.</p>
         )}
       </div>

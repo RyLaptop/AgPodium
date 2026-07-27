@@ -51,6 +51,16 @@ export function UserAvatar({
   size?: "sm" | "md" | "lg";
 }) {
   const s = SIZE[size];
+
+  if (avatarUrl && (avatarUrl.startsWith("http://") || avatarUrl.startsWith("https://"))) {
+    return (
+      <div className={`${s.wrap} rounded-full overflow-hidden shrink-0`}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={avatarUrl} alt={name} className="w-full h-full object-cover" />
+      </div>
+    );
+  }
+
   const bg = avatarUrl ? BG_MAP[avatarUrl] : null;
 
   if (avatarUrl && bg) {

@@ -50,7 +50,7 @@ export function MapPageClient() {
               .in("org_id", orgIds)
               .gte("starts_at", now)
               .order("starts_at", { ascending: true })
-              .limit(50) as unknown as Promise<{ data: unknown[] | null }>
+              .limit(100) as unknown as Promise<{ data: unknown[] | null }>
           );
         }
 
@@ -68,15 +68,21 @@ export function MapPageClient() {
         const results = queries.length > 0 ? await Promise.all(queries) : [];
         const allRows = results.flatMap((r) => (r.data ?? []) as Record<string, unknown>[]);
 
-        const seen = new Set<string>();
-        const out: MapMeeting[] = [];
+        // Keep only the soonest upcoming meeting per org
+        const byOrg = new Map<string, Record<string, unknown>>();
         for (const row of allRows) {
-          const id = row.id as string;
-          if (seen.has(id)) continue;
-          seen.add(id);
+          const slug = (row.orgs as { name: string; slug: string } | null)?.slug ?? "";
+          const existing = byOrg.get(slug);
+          if (!existing || (row.starts_at as string) < (existing.starts_at as string)) {
+            byOrg.set(slug, row);
+          }
+        }
+
+        const out: MapMeeting[] = [];
+        for (const row of byOrg.values()) {
           const org = row.orgs as { name: string; slug: string } | null;
           out.push({
-            id,
+            id: row.id as string,
             title: row.title as string,
             org_name: org?.name ?? "",
             org_slug: org?.slug ?? "",
@@ -86,6 +92,7 @@ export function MapPageClient() {
             lng: null,
           });
         }
+        out.sort((a, b) => a.starts_at.localeCompare(b.starts_at));
 
         setMeetings(out);
       } catch (err) {
@@ -133,7 +140,7 @@ export function MapPageClient() {
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="w-full rounded-xl overflow-hidden border border-gray-200" style={{ height: 420 }}>
+          <div className="isolate w-full rounded-xl overflow-hidden border border-gray-200" style={{ height: 420 }}>
             <MapWrapper meetings={meetings} />
           </div>
           <div className="grid sm:grid-cols-2 gap-3">

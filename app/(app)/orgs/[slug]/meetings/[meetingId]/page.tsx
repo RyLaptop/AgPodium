@@ -29,7 +29,7 @@ export default async function MeetingPage({
   const { data: meeting } = await svc
     .from("meetings")
     .select(
-      "id, title, agenda, location, starts_at, ends_at, slots_open, slot_length_minutes, org_id, cancelled_at, orgs(name, slug)"
+      "id, title, agenda, location, starts_at, ends_at, slots_open, slot_length_minutes, org_id, cancelled_at, series_id, orgs(name, slug)"
     )
     .eq("id", meetingId)
     .single();
@@ -210,6 +210,7 @@ export default async function MeetingPage({
               <EditMeeting
                 meetingId={meetingId}
                 orgSlug={slug}
+                seriesId={(meeting as unknown as { series_id?: string | null }).series_id ?? null}
                 title={meeting.title}
                 startsAt={meeting.starts_at}
                 endsAt={meeting.ends_at ?? null}

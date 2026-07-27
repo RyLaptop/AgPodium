@@ -72,11 +72,13 @@ export async function createMeeting(
 
   const isRecurring = repeatType !== "none";
   const count = isRecurring ? repeatCount : 1;
+  const seriesId = isRecurring ? crypto.randomUUID() : null;
 
   const rows = Array.from({ length: count }, (_, i) => ({
     ...base,
     starts_at: addInterval(startsAt, repeatType, i).toISOString(),
     ends_at: endsAt ? addInterval(endsAt, repeatType, i).toISOString() : null,
+    ...(seriesId ? { series_id: seriesId } : {}),
   }));
 
   const { data: inserted, error } = await supabase
@@ -371,6 +373,85 @@ export async function respondCohost(cohostId: string, meetingId: string, orgSlug
 
   revalidatePath(`/orgs/${orgSlug}/meetings/${meetingId}`);
   return { ok: true as const };
+}
+
+export async function updateMeetingSeries(
+  seriesId: string,
+  orgSlug: string,
+  data: {
+    title: string;
+    location: string;
+    agenda: string;
+    slotsOpen: number;
+    slotLength: number;
+  }
+) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not signed in" };
+
+  const svc = createServiceClient();
+  const { data: firstMeeting } = await svc.from("meetings")
+    .select("org_id").eq("series_id", seriesId).limit(1).maybeSingle();
+  if (!firstMeeting) return { ok: false as const, error: "Series not found." };
+
+  const { data: myMem } = await supabase.from("org_members").select("role")
+    .eq("org_id", firstMeeting.org_id).eq("user_id", user.id).eq("status", "active").maybeSingle();
+  if (!myMem || !["officer", "director"].includes(myMem.role)) return { ok: false as const, error: "Not authorized." };
+
+  if (data.title.length < 2) return { ok: false as const, error: "Title is too short." };
+
+  const { error } = await svc.from("meetings").update({
+    title: data.title,
+    location: data.location || null,
+    agenda: data.agenda || null,
+    slots_open: data.slotsOpen,
+    slot_length_minutes: data.slotLength,
+  }).eq("series_id", seriesId);
+
+  if (error) return { ok: false as const, error: error.message };
+  revalidatePath(`/orgs/${orgSlug}`);
+  return { ok: true as const };
+}
+
+export async function deleteMeetingSeries(seriesId: string, orgSlug: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not signed in" };
+
+  const svc = createServiceClient();
+  const { data: firstMeeting } = await svc.from("meetings")
+    .select("org_id").eq("series_id", seriesId).limit(1).maybeSingle();
+  if (!firstMeeting) return { ok: false as const, error: "Series not found." };
+
+  const { data: myMem } = await supabase.from("org_members").select("role")
+    .eq("org_id", firstMeeting.org_id).eq("user_id", user.id).eq("status", "active").maybeSingle();
+  if (!myMem || !["officer", "director"].includes(myMem.role)) return { ok: false as const, error: "Not authorized." };
+
+  const { data: seriesMeetings } = await svc.from("meetings").select("id").eq("series_id", seriesId);
+  if (seriesMeetings && seriesMeetings.length > 0) {
+    const meetingIds = seriesMeetings.map((m) => m.id);
+    const { data: speakers } = await svc.from("speak_requests")
+      .select("requester_user_id").in("meeting_id", meetingIds).in("status", ["pending", "approved", "waitlisted"]);
+    if (speakers && speakers.length > 0) {
+      await svc.from("speak_requests").update({ status: "cancelled" })
+        .in("meeting_id", meetingIds).in("status", ["pending", "approved", "waitlisted"]);
+      const { data: m } = await svc.from("meetings").select("title, orgs(name)").eq("id", meetingIds[0]).single();
+      const orgName = (m?.orgs as { name: string } | null)?.name ?? "";
+      await notify(speakers.map((s) => ({
+        userId: s.requester_user_id,
+        type: "request_update" as const,
+        title: `Meeting series cancelled: ${m?.title ?? ""}`,
+        body: `${orgName} cancelled this recurring meeting series`,
+      })));
+    }
+  }
+
+  const { error } = await svc.from("meetings").delete().eq("series_id", seriesId);
+  if (error) return { ok: false as const, error: error.message };
+
+  revalidatePath(`/orgs/${orgSlug}`);
+  redirect(`/orgs/${orgSlug}`);
 }
 
 export async function updateMeeting(

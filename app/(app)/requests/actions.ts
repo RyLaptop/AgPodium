@@ -10,6 +10,96 @@ export type CreateRequestResult =
   | { ok: true; id: string }
   | { ok: false; error: string };
 
+export async function getMeetingsForOrgs(
+  orgIds: string[]
+): Promise<{ id: string; title: string; starts_at: string; org_id: string; org_name: string }[]> {
+  if (orgIds.length === 0) return [];
+  const svc = createServiceClient();
+  const now = new Date().toISOString();
+  const { data } = await svc
+    .from("meetings")
+    .select("id, title, starts_at, org_id, orgs(name)")
+    .in("org_id", orgIds)
+    .gte("starts_at", now)
+    .is("cancelled_at", null)
+    .order("org_id")
+    .order("starts_at", { ascending: true })
+    .limit(100);
+
+  return (data ?? []).map((m) => {
+    const org = m.orgs as unknown as { name: string } | null;
+    return {
+      id: m.id,
+      title: m.title,
+      starts_at: m.starts_at,
+      org_id: m.org_id,
+      org_name: org?.name ?? "",
+    };
+  });
+}
+
+export async function submitSpeakRequests(
+  targets: { meetingId: string; requesterOrgId: string | null }[],
+  pitch: string,
+  requestedMinutes: number
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (targets.length === 0) return { ok: false, error: "No meetings selected." };
+  if (pitch.trim().length < 5) return { ok: false, error: "Pitch is too short (min 5 chars)." };
+  if (!Number.isInteger(requestedMinutes) || requestedMinutes < 1) {
+    return { ok: false, error: "Minutes must be at least 1." };
+  }
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Not signed in." };
+
+  const rows = targets.map((t) => ({
+    meeting_id: t.meetingId,
+    requester_user_id: user.id,
+    requester_org_id: t.requesterOrgId || null,
+    pitch: pitch.trim(),
+    requested_minutes: requestedMinutes,
+    status: "pending",
+  }));
+
+  const { error } = await supabase.from("speak_requests").insert(rows);
+  if (error) return { ok: false, error: error.message };
+
+  // Notify officers of each target meeting's org
+  const svc = createServiceClient();
+  const meetingIds = targets.map((t) => t.meetingId);
+  const [{ data: meetingRows }, { data: me }] = await Promise.all([
+    svc.from("meetings").select("id, org_id, title, orgs(name, slug)").in("id", meetingIds),
+    supabase.from("users").select("full_name, email").eq("id", user.id).single(),
+  ]);
+
+  const requesterName = me?.full_name ?? user.email ?? "Someone";
+  for (const m of meetingRows ?? []) {
+    const orgName = (m.orgs as unknown as { name: string; slug: string } | null)?.name ?? "";
+    const orgSlug = (m.orgs as unknown as { name: string; slug: string } | null)?.slug ?? "";
+    const { data: officers } = await svc
+      .from("org_members")
+      .select("user_id")
+      .eq("org_id", m.org_id)
+      .in("role", ["officer", "director"])
+      .eq("status", "active");
+    if (officers && officers.length > 0) {
+      await notify(
+        officers.map((o) => ({
+          userId: o.user_id,
+          type: "request_update" as const,
+          title: `New speak request: ${m.title}`,
+          body: `${requesterName}${orgName ? ` (${orgName})` : ""} wants to speak`,
+          link: orgSlug ? `/orgs/${orgSlug}/meetings/${m.id}` : "/requests",
+        }))
+      );
+    }
+  }
+
+  revalidatePath("/requests");
+  return { ok: true };
+}
+
 export async function createSpeakRequest(
   meetingId: string,
   orgSlug: string,

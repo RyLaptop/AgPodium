@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { FeedbackForm } from "./_feedback";
+import { MakeRequest } from "./_make-request";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +21,13 @@ export default async function RequestsPage() {
       </div>
     </div>
   );
+
+  const svc = createServiceClient();
+  const { data: allOrgs } = await svc
+    .from("orgs")
+    .select("id, name, slug")
+    .eq("status", "approved")
+    .order("name");
 
   const [{ data: mine }, { data: incoming }] = await Promise.all([
     supabase
@@ -45,7 +54,10 @@ export default async function RequestsPage() {
       <h1 className="text-3xl font-bold">Requests</h1>
 
       <section>
-        <h2 className="text-xl font-semibold mb-3">My requests</h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-xl font-semibold">My requests</h2>
+          <MakeRequest allOrgs={(allOrgs ?? []).map((o) => ({ id: o.id, name: o.name, slug: o.slug }))} />
+        </div>
         {(() => {
           const active = (mine ?? []).filter((r) => {
             if (r.status !== "completed") return true;
