@@ -4,6 +4,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { ReviewQueue } from "./_review-queue";
 import { OrgApprovalQueue } from "./_org-approval";
 import { UserList } from "./_user-list";
+import { TestEmailButton } from "./_test-email";
 
 export const dynamic = "force-dynamic";
 
@@ -62,7 +63,10 @@ export default async function BulletinAdminPage() {
 
   return (
     <div className="space-y-8">
-      <h1 className="text-3xl font-bold">Admin</h1>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <h1 className="text-3xl font-bold">Admin</h1>
+        <TestEmailButton />
+      </div>
 
       {pendingOrgsList.length > 0 && (
         <section>
