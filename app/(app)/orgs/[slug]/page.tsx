@@ -8,6 +8,7 @@ import { JoinLeaveButton } from "./_join-leave";
 import { PendingMembers } from "./_pending-members";
 import { ActiveMembers } from "./_active-members";
 import { EditOrgForm } from "./_edit-org";
+import { DeleteOrgButton } from "./_delete-org";
 import { Affiliations } from "./_affiliations";
 import { CohostInvites } from "./_cohost-invites";
 import { AuthGatedLink } from "@/app/(app)/_auth-gate";
@@ -255,6 +256,7 @@ export default async function OrgProfilePage({
               currentInstagramUrl={(org as unknown as { instagram_url?: string | null }).instagram_url ?? null}
             />
             <InviteLink orgId={org.id} orgSlug={org.slug} existingCode={existingInvite?.code ?? null} />
+            <DeleteOrgButton orgId={org.id} orgName={org.name} />
           </div>
         )}
       </div>

@@ -580,6 +580,30 @@ export async function rejectOrg(orgId: string, reason: string) {
   return { ok: true as const };
 }
 
+export async function deleteOrg(orgId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not signed in" };
+
+  const [{ data: myMem }, { data: profile }] = await Promise.all([
+    supabase.from("org_members").select("role")
+      .eq("org_id", orgId).eq("user_id", user.id).eq("status", "active").maybeSingle(),
+    supabase.from("users").select("is_site_admin").eq("id", user.id).single(),
+  ]);
+
+  if (myMem?.role !== "director" && !profile?.is_site_admin) {
+    return { ok: false as const, error: "Only STAFF or site admins can delete an org." };
+  }
+
+  const svc = createServiceClient();
+  const { error } = await svc.from("orgs").delete().eq("id", orgId);
+  if (error) return { ok: false as const, error: error.message };
+
+  revalidatePath("/orgs");
+  revalidatePath("/dashboard");
+  return { ok: true as const };
+}
+
 export async function acceptInvite(code: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
