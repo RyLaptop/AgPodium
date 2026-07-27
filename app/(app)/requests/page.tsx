@@ -41,7 +41,7 @@ export default async function RequestsPage() {
         "id, pitch, status, requested_minutes, created_at, speaker_feedback_at, meetings(id, title, starts_at, orgs(name, slug))"
       )
       .eq("requester_user_id", user.id)
-      .in("status", ["pending", "approved", "denied", "disputed", "completed"])
+      .in("status", ["pending", "waitlisted", "approved", "denied", "disputed", "completed"])
       .order("created_at", { ascending: false }),
     // RLS returns rows the officer can see across orgs they officer/direct
     supabase
@@ -178,6 +178,7 @@ export default async function RequestsPage() {
 function StatusPill({ status }: { status: string }) {
   const styles: Record<string, string> = {
     pending: "bg-yellow-100 text-yellow-800",
+    waitlisted: "bg-amber-100 text-amber-800",
     approved: "bg-green-100 text-green-800",
     denied: "bg-red-100 text-red-800",
     completed: "bg-blue-100 text-blue-800",
