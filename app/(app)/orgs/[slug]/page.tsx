@@ -206,10 +206,12 @@ export default async function OrgProfilePage({
               )}
               {(() => {
                 const o = org as unknown as { website_url?: string | null; tiktok_url?: string | null; instagram_url?: string | null };
+                const ensureProtocol = (url: string) =>
+                  /^https?:\/\//i.test(url) ? url : `https://${url}`;
                 const links = [
-                  o.website_url ? { href: o.website_url, label: "Website" } : null,
-                  o.tiktok_url ? { href: o.tiktok_url, label: "TikTok" } : null,
-                  o.instagram_url ? { href: o.instagram_url, label: "Instagram" } : null,
+                  o.website_url ? { href: ensureProtocol(o.website_url), label: "Website" } : null,
+                  o.tiktok_url ? { href: ensureProtocol(o.tiktok_url), label: "TikTok" } : null,
+                  o.instagram_url ? { href: ensureProtocol(o.instagram_url), label: "Instagram" } : null,
                 ].filter(Boolean) as { href: string; label: string }[];
                 return links.length > 0 ? (
                   <div className="flex flex-wrap gap-3 mt-2">
