@@ -41,8 +41,8 @@ export default async function RequestsPage() {
   const [
     { data: mySpeakReqs },
     { data: incomingSpeakReqs },
-    { data: myJoinReqs },
-    { data: incomingJoinReqs },
+    { data: myJoinRows },
+    { data: incomingJoinRows },
     { data: sentDmReqs },
     { data: receivedDmReqs },
   ] = await Promise.all([
@@ -60,9 +60,10 @@ export default async function RequestsPage() {
       .in("status", ["pending", "approved", "disputed"])
       .order("created_at", { ascending: false }),
 
+    // No nested joins — fetch org/user details separately below
     svc
       .from("org_members")
-      .select("org_id, created_at, orgs(id, name, slug)")
+      .select("org_id, created_at")
       .eq("user_id", user.id)
       .eq("status", "pending")
       .order("created_at", { ascending: false }),
@@ -70,11 +71,11 @@ export default async function RequestsPage() {
     myOrgIds.length > 0
       ? svc
           .from("org_members")
-          .select("user_id, org_id, created_at, orgs(name, slug), users(id, full_name, email)")
+          .select("user_id, org_id, created_at")
           .in("org_id", myOrgIds)
           .eq("status", "pending")
           .order("created_at", { ascending: false })
-      : Promise.resolve({ data: [] as unknown[] }),
+      : Promise.resolve({ data: [] as { user_id: string; org_id: string; created_at: string }[] }),
 
     svc
       .from("dm_threads")
@@ -92,16 +93,46 @@ export default async function RequestsPage() {
       .order("created_at", { ascending: false }),
   ]);
 
-  // Fetch user profiles needed for DM thread displays
-  const dmAllIds = [
+  // Collect IDs needed for join request lookups and DM thread user profiles
+  const joinOrgIds = [...new Set([
+    ...(myJoinRows ?? []).map((r) => r.org_id),
+    ...(incomingJoinRows ?? []).map((r) => r.org_id),
+  ])];
+  const joinUserIds = [...new Set((incomingJoinRows ?? []).map((r) => r.user_id))];
+  const dmOtherIds = [...new Set([
     ...(sentDmReqs ?? []).map((t) => (t.user_a === user.id ? t.user_b : t.user_a)),
     ...(receivedDmReqs ?? []).map((t) => (t.user_a === user.id ? t.user_b : t.user_a)),
-  ];
-  const uniqueDmIds = [...new Set(dmAllIds)].filter(Boolean) as string[];
-  const { data: dmProfiles } = uniqueDmIds.length > 0
-    ? await svc.from("users").select("id, full_name, email").in("id", uniqueDmIds)
-    : { data: [] };
+  ])].filter(Boolean) as string[];
+
+  const [{ data: joinOrgsData }, { data: joinUsersData }, { data: dmProfiles }] = await Promise.all([
+    joinOrgIds.length > 0
+      ? svc.from("orgs").select("id, name, slug").in("id", joinOrgIds)
+      : Promise.resolve({ data: [] as { id: string; name: string; slug: string }[] }),
+    joinUserIds.length > 0
+      ? svc.from("users").select("id, full_name, email").in("id", joinUserIds)
+      : Promise.resolve({ data: [] as { id: string; full_name: string | null; email: string }[] }),
+    dmOtherIds.length > 0
+      ? svc.from("users").select("id, full_name, email").in("id", dmOtherIds)
+      : Promise.resolve({ data: [] as { id: string; full_name: string | null; email: string }[] }),
+  ]);
+
+  const joinOrgsMap = new Map((joinOrgsData ?? []).map((o) => [o.id, o]));
+  const joinUsersMap = new Map((joinUsersData ?? []).map((u) => [u.id, u]));
   const dmProfileMap = new Map((dmProfiles ?? []).map((p) => [p.id, p]));
+
+  const myJoinReqs = (myJoinRows ?? []).map((r) => ({
+    org_id: r.org_id,
+    created_at: r.created_at,
+    org: joinOrgsMap.get(r.org_id) ?? null,
+  }));
+
+  const incomingJoinReqs = (incomingJoinRows ?? []).map((r) => ({
+    user_id: r.user_id,
+    org_id: r.org_id,
+    created_at: r.created_at,
+    org: joinOrgsMap.get(r.org_id) ?? null,
+    member: joinUsersMap.get(r.user_id) ?? null,
+  }));
 
   return (
     <div className="space-y-10">
@@ -200,24 +231,25 @@ export default async function RequestsPage() {
             <p className="text-gray-500 text-sm">No pending join requests.</p>
           ) : (
             <ul className="space-y-2">
-              {myJoinReqs.map((r) => {
-                const org = r.orgs as unknown as { id: string; name: string; slug: string };
-                return (
-                  <li key={r.org_id}>
-                    <div className="border border-gray-200 rounded-lg p-3 flex items-center justify-between gap-2">
-                      <div className="min-w-0">
-                        <Link href={`/orgs/${org.slug}`} className="font-medium hover:text-brand truncate block">
-                          {org.name}
+              {myJoinReqs.map((r) => (
+                <li key={r.org_id}>
+                  <div className="border border-gray-200 rounded-lg p-3 flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      {r.org ? (
+                        <Link href={`/orgs/${r.org.slug}`} className="font-medium hover:text-brand truncate block">
+                          {r.org.name}
                         </Link>
-                        <p className="text-xs text-gray-500 mt-0.5">
-                          Submitted {new Date(r.created_at).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <StatusPill status="pending" />
+                      ) : (
+                        <p className="font-medium text-gray-500 truncate">Unknown org</p>
+                      )}
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        Submitted {new Date(r.created_at).toLocaleDateString()}
+                      </p>
                     </div>
-                  </li>
-                );
-              })}
+                    <StatusPill status="pending" />
+                  </div>
+                </li>
+              ))}
             </ul>
           )}
         </section>
@@ -229,21 +261,19 @@ export default async function RequestsPage() {
               <p className="text-gray-500 text-sm">No pending join requests for your orgs.</p>
             ) : (
               <ul className="space-y-2">
-                {(incomingJoinReqs as unknown[]).map((row) => {
-                  const r = row as {
-                    user_id: string; org_id: string; created_at: string;
-                    orgs: { name: string; slug: string };
-                    users: { id: string; full_name: string | null; email: string };
-                  };
-                  const personName = r.users.full_name ?? r.users.email.split("@")[0];
+                {incomingJoinReqs.map((r) => {
+                  const personName = r.member?.full_name ?? r.member?.email.split("@")[0] ?? "Unknown";
                   return (
                     <li key={`${r.org_id}-${r.user_id}`}>
                       <div className="border border-gray-200 rounded-lg p-3 flex items-center justify-between gap-2">
                         <div className="min-w-0">
                           <p className="font-medium truncate">
-                            <Link href={`/profile/${r.users.id}`} className="hover:text-brand">{personName}</Link>
+                            <Link href={`/profile/${r.user_id}`} className="hover:text-brand">{personName}</Link>
                             {" → "}
-                            <Link href={`/orgs/${r.orgs.slug}`} className="hover:text-brand">{r.orgs.name}</Link>
+                            {r.org
+                              ? <Link href={`/orgs/${r.org.slug}`} className="hover:text-brand">{r.org.name}</Link>
+                              : <span>Unknown org</span>
+                            }
                           </p>
                           <p className="text-xs text-gray-500 mt-0.5">{new Date(r.created_at).toLocaleDateString()}</p>
                         </div>
