@@ -4,6 +4,7 @@ import { useState, useTransition, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { updateProfile, uploadAvatar } from "../actions";
 import { AVATAR_OPTIONS, UserAvatar } from "@/components/user-avatar";
+import { AvatarCrop } from "./_avatar-crop";
 
 export function EditProfileForm({
   currentName,
@@ -24,6 +25,7 @@ export function EditProfileForm({
   const [avatarUrl, setAvatarUrl] = useState<string | null>(isPhoto ? null : currentAvatarUrl);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(isPhoto ? currentAvatarUrl : null);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -32,10 +34,19 @@ export function EditProfileForm({
   const onPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setPhotoFile(file);
-    setPhotoPreview(URL.createObjectURL(file));
-    setAvatarUrl(null);
+    // open crop modal instead of using directly
+    setCropSrc(URL.createObjectURL(file));
+    if (fileRef.current) fileRef.current.value = "";
   };
+
+  const onCropConfirm = (croppedFile: File) => {
+    setPhotoFile(croppedFile);
+    setPhotoPreview(URL.createObjectURL(croppedFile));
+    setAvatarUrl(null);
+    setCropSrc(null);
+  };
+
+  const onCropCancel = () => setCropSrc(null);
 
   const clearPhoto = () => {
     setPhotoPreview(null);
@@ -84,6 +95,10 @@ export function EditProfileForm({
   }
 
   return (
+    <>
+    {cropSrc && (
+      <AvatarCrop src={cropSrc} onConfirm={onCropConfirm} onCancel={onCropCancel} />
+    )}
     <div className="border border-gray-200 rounded-lg p-4 space-y-4">
       <h3 className="font-semibold">Edit profile</h3>
 
@@ -191,5 +206,6 @@ export function EditProfileForm({
         </button>
       </div>
     </div>
+    </>
   );
 }
