@@ -25,6 +25,7 @@ type Props = {
 
 export function EditMeeting({ meetingId, orgSlug, seriesId, title, startsAt, endsAt, location, agenda, slotsOpen, slotLength }: Props) {
   const [open, setOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [applyToSeries, setApplyToSeries] = useState(false);
   const [fields, setFields] = useState({
     title,
@@ -84,18 +85,58 @@ export function EditMeeting({ meetingId, orgSlug, seriesId, title, startsAt, end
   const doDelete = () => {
     if (applyToSeries && seriesId) {
       if (!confirm("Permanently delete all meetings in this series? This cannot be undone.")) return;
-      startTransition(async () => {
-        await deleteMeetingSeries(seriesId, orgSlug);
-      });
+      startTransition(async () => { await deleteMeetingSeries(seriesId, orgSlug); });
     } else {
       if (!confirm("Permanently delete this meeting? This cannot be undone.")) return;
-      startTransition(async () => {
-        await deleteMeeting(meetingId, orgSlug);
-      });
+      startTransition(async () => { await deleteMeeting(meetingId, orgSlug); });
     }
   };
 
+  const doDeleteJustThis = () => {
+    if (!confirm("Permanently delete just this meeting? This cannot be undone.")) return;
+    setDeleteConfirm(false);
+    startTransition(async () => { await deleteMeeting(meetingId, orgSlug); });
+  };
+
+  const doDeleteSeries = () => {
+    if (!confirm("Permanently delete ALL meetings in this series? This cannot be undone.")) return;
+    setDeleteConfirm(false);
+    startTransition(async () => { await deleteMeetingSeries(seriesId!, orgSlug); });
+  };
+
   if (!open) {
+    if (deleteConfirm && seriesId) {
+      return (
+        <div className="border border-red-200 bg-red-50 rounded-lg p-4 space-y-3 max-w-sm">
+          <p className="text-sm font-medium text-red-800">This meeting is part of a recurring series.</p>
+          <p className="text-xs text-red-700">Do you want to delete just this one, or all meetings in the series?</p>
+          <div className="flex flex-col gap-2">
+            <button
+              onClick={doDeleteJustThis}
+              disabled={pending}
+              className="text-sm px-3 py-1.5 border border-red-300 text-red-700 rounded-lg hover:bg-red-100 disabled:opacity-60 text-left"
+            >
+              Delete just this meeting
+            </button>
+            <button
+              onClick={doDeleteSeries}
+              disabled={pending}
+              className="text-sm px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-60 text-left"
+            >
+              Delete all meetings in this series
+            </button>
+            <button
+              onClick={() => setDeleteConfirm(false)}
+              disabled={pending}
+              className="text-sm px-3 py-1.5 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 text-left"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="flex gap-2 flex-wrap">
         <button
@@ -105,7 +146,7 @@ export function EditMeeting({ meetingId, orgSlug, seriesId, title, startsAt, end
           Edit meeting
         </button>
         <button
-          onClick={doDelete}
+          onClick={() => seriesId ? setDeleteConfirm(true) : doDelete()}
           disabled={pending}
           className="text-sm px-3 py-1.5 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 disabled:opacity-60"
         >
