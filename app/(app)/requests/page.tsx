@@ -23,11 +23,16 @@ export default async function RequestsPage() {
   );
 
   const svc = createServiceClient();
-  const { data: allOrgs } = await svc
-    .from("orgs")
-    .select("id, name, slug")
-    .eq("status", "approved")
-    .order("name");
+  const [{ data: allOrgs }, { data: myOrgMemberships }] = await Promise.all([
+    svc.from("orgs").select("id, name, slug").eq("status", "approved").order("name"),
+    supabase.from("org_members").select("org_id, orgs(id, name)")
+      .eq("user_id", user.id).eq("status", "active").in("role", ["officer", "director"]),
+  ]);
+
+  const myOrgs = (myOrgMemberships ?? []).map((m) => {
+    const o = m.orgs as unknown as { id: string; name: string } | null;
+    return o ? { id: o.id, name: o.name } : null;
+  }).filter(Boolean) as { id: string; name: string }[];
 
   const [{ data: mine }, { data: incoming }] = await Promise.all([
     supabase
@@ -56,7 +61,10 @@ export default async function RequestsPage() {
       <section>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-xl font-semibold">My requests</h2>
-          <MakeRequest allOrgs={(allOrgs ?? []).map((o) => ({ id: o.id, name: o.name, slug: o.slug }))} />
+          <MakeRequest
+            allOrgs={(allOrgs ?? []).map((o) => ({ id: o.id, name: o.name, slug: o.slug }))}
+            myOrgs={myOrgs}
+          />
         </div>
         {(() => {
           const active = (mine ?? []).filter((r) => {

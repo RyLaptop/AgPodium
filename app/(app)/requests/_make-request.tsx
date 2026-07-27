@@ -5,21 +5,30 @@ import { useRouter } from "next/navigation";
 import { getMeetingsForOrgs, submitSpeakRequests } from "./actions";
 
 type Org = { id: string; name: string; slug: string };
-type Meeting = { id: string; title: string; starts_at: string; org_id: string; org_name: string };
+type MyOrg = { id: string; name: string };
+type Meeting = {
+  id: string;
+  title: string;
+  starts_at: string;
+  org_id: string;
+  org_name: string;
+  slots_open: number;
+  approved_count: number;
+};
 
 type Step = "orgs" | "meetings" | "pitch";
 
-export function MakeRequest({ allOrgs }: { allOrgs: Org[] }) {
+export function MakeRequest({ allOrgs, myOrgs }: { allOrgs: Org[]; myOrgs: MyOrg[] }) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<Step>("orgs");
   const [multiMode, setMultiMode] = useState(false);
   const [orgSearch, setOrgSearch] = useState("");
   const [selectedOrgIds, setSelectedOrgIds] = useState<string[]>([]);
   const [meetings, setMeetings] = useState<Meeting[]>([]);
-  // org_id -> array of selected meeting IDs
   const [selectedMeetingIds, setSelectedMeetingIds] = useState<Record<string, string[]>>({});
   const [pitch, setPitch] = useState("");
   const [minutes, setMinutes] = useState(2);
+  const [speakingAsOrgId, setSpeakingAsOrgId] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
@@ -33,6 +42,7 @@ export function MakeRequest({ allOrgs }: { allOrgs: Org[] }) {
     setSelectedMeetingIds({});
     setPitch("");
     setMinutes(2);
+    setSpeakingAsOrgId("");
     setError(null);
   };
 
@@ -83,13 +93,20 @@ export function MakeRequest({ allOrgs }: { allOrgs: Org[] }) {
   );
 
   const goToPitch = () => {
-    if (totalSelected === 0) {
-      setError("Please select at least one meeting.");
-      return;
-    }
+    if (totalSelected === 0) { setError("Please select at least one meeting."); return; }
     setError(null);
     setStep("pitch");
   };
+
+  const isMeetingFull = (m: Meeting) => m.approved_count >= m.slots_open;
+
+  // Count how many selected meetings are full (will be waitlisted)
+  const waitlistedCount = selectedOrgIds.reduce((sum, orgId) => {
+    return sum + (selectedMeetingIds[orgId] ?? []).filter((mid) => {
+      const m = meetings.find((x) => x.id === mid);
+      return m && isMeetingFull(m);
+    }).length;
+  }, 0);
 
   const submit = () => {
     if (pitch.trim().length < 5) { setError("Pitch must be at least 5 characters."); return; }
@@ -97,10 +114,9 @@ export function MakeRequest({ allOrgs }: { allOrgs: Org[] }) {
     const targets = selectedOrgIds.flatMap((orgId) =>
       (selectedMeetingIds[orgId] ?? []).map((meetingId) => ({
         meetingId,
-        requesterOrgId: null,
+        requesterOrgId: speakingAsOrgId || null,
       }))
     );
-
     startTransition(async () => {
       const res = await submitSpeakRequests(targets, pitch.trim(), minutes);
       if (!res.ok) { setError(res.error); return; }
@@ -141,10 +157,7 @@ export function MakeRequest({ allOrgs }: { allOrgs: Org[] }) {
             <input
               type="checkbox"
               checked={multiMode}
-              onChange={(e) => {
-                setMultiMode(e.target.checked);
-                setSelectedOrgIds([]);
-              }}
+              onChange={(e) => { setMultiMode(e.target.checked); setSelectedOrgIds([]); }}
               className="rounded"
             />
             Select multiple orgs
@@ -199,7 +212,9 @@ export function MakeRequest({ allOrgs }: { allOrgs: Org[] }) {
       {/* Step 2: Meeting selection */}
       {step === "meetings" && (
         <div className="space-y-4">
-          <p className="text-xs text-gray-500">Click to select — you can pick multiple meetings per org.</p>
+          <p className="text-xs text-gray-500">
+            Select meetings to request a slot. Full meetings show a waitlist option.
+          </p>
           {selectedOrgIds.map((orgId) => {
             const org = orgById(orgId);
             const orgMeetings = meetingsForOrg(orgId);
@@ -212,7 +227,9 @@ export function MakeRequest({ allOrgs }: { allOrgs: Org[] }) {
                 ) : (
                   <div className="space-y-1">
                     {orgMeetings.map((m) => {
+                      const full = isMeetingFull(m);
                       const selected = orgSelected.includes(m.id);
+                      const remaining = Math.max(0, m.slots_open - m.approved_count);
                       return (
                         <button
                           key={m.id}
@@ -220,16 +237,33 @@ export function MakeRequest({ allOrgs }: { allOrgs: Org[] }) {
                           onClick={() => toggleMeeting(orgId, m.id)}
                           className={`w-full text-left px-3 py-2 rounded-md text-sm border transition ${
                             selected
-                              ? "border-brand bg-brand/5 text-brand"
-                              : "border-gray-200 hover:border-brand text-gray-800"
+                              ? full
+                                ? "border-amber-400 bg-amber-50 text-amber-800"
+                                : "border-brand bg-brand/5 text-brand"
+                              : full
+                                ? "border-gray-200 hover:border-amber-400 text-gray-800"
+                                : "border-gray-200 hover:border-brand text-gray-800"
                           }`}
                         >
-                          <span className="font-medium">{m.title}</span>
-                          <span className="text-xs text-gray-500 ml-2">
-                            {new Date(m.starts_at).toLocaleDateString("en-US", {
-                              weekday: "short", month: "short", day: "numeric",
-                            })}
-                          </span>
+                          <div className="flex items-center justify-between gap-2">
+                            <div>
+                              <span className="font-medium">{m.title}</span>
+                              <span className="text-xs text-gray-500 ml-2">
+                                {new Date(m.starts_at).toLocaleDateString("en-US", {
+                                  weekday: "short", month: "short", day: "numeric",
+                                })}
+                              </span>
+                            </div>
+                            {full ? (
+                              <span className="text-xs px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded shrink-0">
+                                Full — Waitlist
+                              </span>
+                            ) : (
+                              <span className="text-xs text-gray-400 shrink-0">
+                                {remaining} slot{remaining !== 1 ? "s" : ""} open
+                              </span>
+                            )}
+                          </div>
                         </button>
                       );
                     })}
@@ -252,7 +286,9 @@ export function MakeRequest({ allOrgs }: { allOrgs: Org[] }) {
               Next →
             </button>
             {totalSelected > 0 && (
-              <span className="text-xs text-gray-500">{totalSelected} meeting{totalSelected !== 1 ? "s" : ""} selected</span>
+              <span className="text-xs text-gray-500">
+                {totalSelected} selected{waitlistedCount > 0 ? ` (${waitlistedCount} waitlist)` : ""}
+              </span>
             )}
             <button onClick={close} className="px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 ml-auto">
               Cancel
@@ -268,16 +304,36 @@ export function MakeRequest({ allOrgs }: { allOrgs: Org[] }) {
             {selectedOrgIds.flatMap((orgId) => {
               const org = orgById(orgId);
               return (selectedMeetingIds[orgId] ?? []).map((meetingId) => {
-                const m = meetings.find((m) => m.id === meetingId);
+                const m = meetings.find((x) => x.id === meetingId);
+                const full = m && isMeetingFull(m);
                 return (
-                  <p key={meetingId}>
+                  <p key={meetingId} className="flex items-center gap-1.5">
                     <span className="font-medium text-gray-700">{org?.name}</span>
                     {m && ` · ${m.title} (${new Date(m.starts_at).toLocaleDateString()})`}
+                    {full && (
+                      <span className="text-xs px-1 py-0.5 bg-amber-100 text-amber-700 rounded">waitlist</span>
+                    )}
                   </p>
                 );
               });
             })}
           </div>
+
+          {myOrgs.length > 0 && (
+            <label className="block">
+              <span className="text-sm font-medium">Speaking on behalf of</span>
+              <select
+                value={speakingAsOrgId}
+                onChange={(e) => setSpeakingAsOrgId(e.target.value)}
+                className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand bg-white"
+              >
+                <option value="">Myself (personal)</option>
+                {myOrgs.map((o) => (
+                  <option key={o.id} value={o.id}>{o.name}</option>
+                ))}
+              </select>
+            </label>
+          )}
 
           <label className="block">
             <span className="text-sm font-medium">Your pitch</span>

@@ -14,13 +14,13 @@ export type CreateRequestResult =
 
 export async function getMeetingsForOrgs(
   orgIds: string[]
-): Promise<{ id: string; title: string; starts_at: string; org_id: string; org_name: string }[]> {
+): Promise<{ id: string; title: string; starts_at: string; org_id: string; org_name: string; slots_open: number; approved_count: number }[]> {
   if (orgIds.length === 0) return [];
   const svc = createServiceClient();
   const now = new Date().toISOString();
   const { data } = await svc
     .from("meetings")
-    .select("id, title, starts_at, org_id, orgs(name)")
+    .select("id, title, starts_at, org_id, slots_open, orgs(name)")
     .in("org_id", orgIds)
     .gte("starts_at", now)
     .is("cancelled_at", null)
@@ -28,7 +28,20 @@ export async function getMeetingsForOrgs(
     .order("starts_at", { ascending: true })
     .limit(100);
 
-  return (data ?? []).map((m) => {
+  const meetings = data ?? [];
+  const meetingIds = meetings.map((m) => m.id);
+
+  const { data: approvedRows } = meetingIds.length > 0
+    ? await svc.from("speak_requests").select("meeting_id")
+        .in("meeting_id", meetingIds).in("status", ["approved", "completed"])
+    : { data: [] };
+
+  const approvedByMeeting = new Map<string, number>();
+  for (const row of approvedRows ?? []) {
+    approvedByMeeting.set(row.meeting_id, (approvedByMeeting.get(row.meeting_id) ?? 0) + 1);
+  }
+
+  return meetings.map((m) => {
     const org = m.orgs as unknown as { name: string } | null;
     return {
       id: m.id,
@@ -36,6 +49,8 @@ export async function getMeetingsForOrgs(
       starts_at: m.starts_at,
       org_id: m.org_id,
       org_name: org?.name ?? "",
+      slots_open: m.slots_open,
+      approved_count: approvedByMeeting.get(m.id) ?? 0,
     };
   });
 }
@@ -55,23 +70,42 @@ export async function submitSpeakRequests(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "Not signed in." };
 
-  const rows = targets.map((t) => ({
-    meeting_id: t.meetingId,
-    requester_user_id: user.id,
-    requester_org_id: t.requesterOrgId || null,
-    pitch: pitch.trim(),
-    requested_minutes: requestedMinutes,
-    status: "pending",
-  }));
+  // Check fullness server-side for each meeting to set waitlist status
+  const svcCheck = createServiceClient();
+  const meetingIds = targets.map((t) => t.meetingId);
+  const [{ data: meetingSlots }, { data: approvedCounts }] = await Promise.all([
+    svcCheck.from("meetings").select("id, slots_open").in("id", meetingIds),
+    svcCheck.from("speak_requests").select("meeting_id")
+      .in("meeting_id", meetingIds).in("status", ["approved", "completed"]),
+  ]);
+  const slotMap = new Map((meetingSlots ?? []).map((m) => [m.id, m.slots_open]));
+  const approvedMap = new Map<string, number>();
+  for (const row of approvedCounts ?? []) {
+    approvedMap.set(row.meeting_id, (approvedMap.get(row.meeting_id) ?? 0) + 1);
+  }
+
+  const rows = targets.map((t) => {
+    const slotsOpen = slotMap.get(t.meetingId) ?? 0;
+    const approved = approvedMap.get(t.meetingId) ?? 0;
+    const isFull = approved >= slotsOpen;
+    return {
+      meeting_id: t.meetingId,
+      requester_user_id: user.id,
+      requester_org_id: t.requesterOrgId || null,
+      pitch: pitch.trim(),
+      requested_minutes: requestedMinutes,
+      status: isFull ? "waitlisted" : "pending",
+    };
+  });
 
   const { error } = await supabase.from("speak_requests").insert(rows);
   if (error) return { ok: false, error: error.message };
 
   // Notify officers of each target meeting's org
   const svc = createServiceClient();
-  const meetingIds = targets.map((t) => t.meetingId);
+  const notifMeetingIds = targets.map((t) => t.meetingId);
   const [{ data: meetingRows }, { data: me }] = await Promise.all([
-    svc.from("meetings").select("id, org_id, title, orgs(name, slug)").in("id", meetingIds),
+    svc.from("meetings").select("id, org_id, title, orgs(name, slug)").in("id", notifMeetingIds),
     supabase.from("users").select("full_name, email").eq("id", user.id).single(),
   ]);
 
