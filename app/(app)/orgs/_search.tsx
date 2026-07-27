@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { tagPill, tagLabel, TAG_COLORS } from "./_tag-colors";
@@ -138,11 +137,10 @@ export function OrgSearch({ orgs }: { orgs: Org[] }) {
               >
                 <div className="flex items-center gap-3 mb-2">
                   {o.logo_url ? (
-                    <Image
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
                       src={o.logo_url}
                       alt={o.name}
-                      width={36}
-                      height={36}
                       className="w-9 h-9 rounded-full object-cover shrink-0"
                     />
                   ) : (
