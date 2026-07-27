@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { ReviewQueue } from "./_review-queue";
 import { OrgApprovalQueue } from "./_org-approval";
+import { UserList } from "./_user-list";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +27,7 @@ export default async function BulletinAdminPage() {
   }
 
   const admin = createServiceClient();
-  const [{ data: pendingPosts }, { data: pendingOrgs }] = await Promise.all([
+  const [{ data: pendingPosts }, { data: pendingOrgs }, { data: allUsers }] = await Promise.all([
     admin.from("bulletin_posts")
       .select("id, event_title, event_description, event_at, event_location, created_at, users!bulletin_posts_submitter_id_fkey(full_name, email), orgs(name)")
       .eq("status", "pending")
@@ -35,6 +36,9 @@ export default async function BulletinAdminPage() {
       .select("id, name, slug, description, tags, created_at, org_members(user_id, role, users(full_name, email))")
       .eq("status", "pending")
       .order("created_at", { ascending: true }),
+    admin.from("users")
+      .select("id, email, full_name, avatar_url, is_site_admin, created_at")
+      .order("created_at", { ascending: false }),
   ]);
 
   const pendingOrgsList = (pendingOrgs ?? []).map((o) => {
@@ -52,6 +56,10 @@ export default async function BulletinAdminPage() {
     };
   });
 
+  const usersList = (allUsers ?? []) as {
+    id: string; email: string; full_name: string | null; avatar_url: string | null; is_site_admin: boolean; created_at: string;
+  }[];
+
   return (
     <div className="space-y-8">
       <h1 className="text-3xl font-bold">Admin</h1>
@@ -66,6 +74,11 @@ export default async function BulletinAdminPage() {
       <section>
         <h2 className="text-xl font-semibold mb-3">Bulletin review queue</h2>
         <ReviewQueue posts={pendingPosts ?? []} />
+      </section>
+
+      <section>
+        <h2 className="text-xl font-semibold mb-3">All users ({usersList.length})</h2>
+        <UserList users={usersList} />
       </section>
     </div>
   );
