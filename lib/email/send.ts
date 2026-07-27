@@ -12,8 +12,11 @@ export async function sendEmail({
   if (!process.env.RESEND_API_KEY) return;
   try {
     const resend = getResend();
-    await resend.emails.send({ from: FROM_EMAIL, to, subject, html });
-  } catch {
-    // Email failures are non-fatal
+    const result = await resend.emails.send({ from: FROM_EMAIL, to, subject, html });
+    if ("error" in result && result.error) {
+      console.error("[sendEmail] Resend error:", result.error, { to, subject });
+    }
+  } catch (err) {
+    console.error("[sendEmail] Exception:", err, { to, subject });
   }
 }
