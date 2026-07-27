@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   signInWithPassword,
   signUpWithPassword,
@@ -8,7 +9,10 @@ import {
 } from "@/app/auth/actions";
 
 export default function LoginPage() {
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const searchParams = useSearchParams();
+  const [mode, setMode] = useState<"signin" | "signup">(
+    searchParams.get("mode") === "signup" ? "signup" : "signin"
+  );
 
   const [signinState, signinAction, signinPending] = useActionState<
     SignInResult | null,

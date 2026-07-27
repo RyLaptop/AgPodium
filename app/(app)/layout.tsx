@@ -115,7 +115,7 @@ export default async function AppLayout({
                     Sign in
                   </Link>
                   <Link
-                    href="/login"
+                    href="/login?mode=signup"
                     className="text-sm px-3 py-1.5 bg-brand text-white rounded-lg hover:bg-brand-dark transition"
                   >
                     Sign up

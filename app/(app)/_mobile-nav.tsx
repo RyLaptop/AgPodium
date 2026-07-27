@@ -114,7 +114,7 @@ export function MobileNav({
                   Sign in
                 </Link>
                 <Link
-                  href="/login"
+                  href="/login?mode=signup"
                   onClick={close}
                   className="block w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm text-center text-gray-700 hover:bg-gray-50 transition"
                 >
