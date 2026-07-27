@@ -26,7 +26,7 @@ export default async function OrgProfilePage({
   const svc = createServiceClient();
   const { data: org } = await svc
     .from("orgs")
-    .select("id, slug, name, description, created_at, tags, logo_url, status, contact_email")
+    .select("id, slug, name, description, created_at, tags, logo_url, status, contact_email, website_url, tiktok_url, instagram_url")
     .eq("slug", slug)
     .single();
 
@@ -204,6 +204,24 @@ export default async function OrgProfilePage({
                   ))}
                 </div>
               )}
+              {(() => {
+                const o = org as unknown as { website_url?: string | null; tiktok_url?: string | null; instagram_url?: string | null };
+                const links = [
+                  o.website_url ? { href: o.website_url, label: "Website" } : null,
+                  o.tiktok_url ? { href: o.tiktok_url, label: "TikTok" } : null,
+                  o.instagram_url ? { href: o.instagram_url, label: "Instagram" } : null,
+                ].filter(Boolean) as { href: string; label: string }[];
+                return links.length > 0 ? (
+                  <div className="flex flex-wrap gap-3 mt-2">
+                    {links.map((l) => (
+                      <a key={l.label} href={l.href} target="_blank" rel="noopener noreferrer"
+                        className="text-xs text-brand hover:underline">
+                        {l.label} ↗
+                      </a>
+                    ))}
+                  </div>
+                ) : null;
+              })()}
             </div>
           </div>
 
@@ -230,6 +248,9 @@ export default async function OrgProfilePage({
               currentTags={tags}
               currentLogoUrl={org.logo_url}
               currentContactEmail={(org as unknown as { contact_email?: string | null }).contact_email ?? null}
+              currentWebsiteUrl={(org as unknown as { website_url?: string | null }).website_url ?? null}
+              currentTiktokUrl={(org as unknown as { tiktok_url?: string | null }).tiktok_url ?? null}
+              currentInstagramUrl={(org as unknown as { instagram_url?: string | null }).instagram_url ?? null}
             />
             <InviteLink orgId={org.id} orgSlug={org.slug} existingCode={existingInvite?.code ?? null} />
           </div>

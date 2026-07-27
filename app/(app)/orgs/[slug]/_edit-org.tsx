@@ -13,6 +13,9 @@ export function EditOrgForm({
   currentTags,
   currentLogoUrl,
   currentContactEmail,
+  currentWebsiteUrl,
+  currentTiktokUrl,
+  currentInstagramUrl,
 }: {
   orgId: string;
   orgSlug: string;
@@ -21,12 +24,18 @@ export function EditOrgForm({
   currentTags: string[];
   currentLogoUrl?: string | null;
   currentContactEmail?: string | null;
+  currentWebsiteUrl?: string | null;
+  currentTiktokUrl?: string | null;
+  currentInstagramUrl?: string | null;
 }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(currentName);
   const [description, setDescription] = useState(currentDescription ?? "");
   const [tags, setTags] = useState<string[]>(currentTags);
   const [contactEmail, setContactEmail] = useState(currentContactEmail ?? "");
+  const [websiteUrl, setWebsiteUrl] = useState(currentWebsiteUrl ?? "");
+  const [tiktokUrl, setTiktokUrl] = useState(currentTiktokUrl ?? "");
+  const [instagramUrl, setInstagramUrl] = useState(currentInstagramUrl ?? "");
   const [logoPreview, setLogoPreview] = useState<string | null>(currentLogoUrl ?? null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -55,7 +64,15 @@ export function EditOrgForm({
         if (!logoRes.ok) { setError(logoRes.error); return; }
       }
 
-      const res = await updateOrg(orgId, orgSlug, { name, description, tags, contactEmail: contactEmail.trim() || undefined });
+      const res = await updateOrg(orgId, orgSlug, {
+        name,
+        description,
+        tags,
+        contactEmail: contactEmail.trim() || undefined,
+        websiteUrl: websiteUrl.trim() || undefined,
+        tiktokUrl: tiktokUrl.trim() || undefined,
+        instagramUrl: instagramUrl.trim() || undefined,
+      });
       if (!res.ok) setError(res.error);
       else { setOpen(false); router.refresh(); }
     });
@@ -145,6 +162,40 @@ export function EditOrgForm({
           className="mt-0.5 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand text-sm"
         />
       </label>
+
+      <label className="block">
+        <span className="text-sm font-medium">Website</span>
+        <input
+          type="url"
+          value={websiteUrl}
+          onChange={(e) => setWebsiteUrl(e.target.value)}
+          placeholder="https://myorg.tamu.edu"
+          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand text-sm"
+        />
+      </label>
+
+      <div className="grid grid-cols-2 gap-3">
+        <label className="block">
+          <span className="text-sm font-medium">TikTok</span>
+          <input
+            type="url"
+            value={tiktokUrl}
+            onChange={(e) => setTiktokUrl(e.target.value)}
+            placeholder="https://tiktok.com/@myorg"
+            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand text-sm"
+          />
+        </label>
+        <label className="block">
+          <span className="text-sm font-medium">Instagram</span>
+          <input
+            type="url"
+            value={instagramUrl}
+            onChange={(e) => setInstagramUrl(e.target.value)}
+            placeholder="https://instagram.com/myorg"
+            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand text-sm"
+          />
+        </label>
+      </div>
 
       <div>
         <p className="text-sm font-medium mb-2">Tags</p>

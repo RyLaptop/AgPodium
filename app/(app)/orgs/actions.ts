@@ -237,7 +237,7 @@ export async function promoteMember(orgId: string, userId: string) {
 export async function updateOrg(
   orgId: string,
   orgSlug: string,
-  data: { name: string; description: string; tags: string[]; contactEmail?: string }
+  data: { name: string; description: string; tags: string[]; contactEmail?: string; websiteUrl?: string; tiktokUrl?: string; instagramUrl?: string }
 ) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -259,7 +259,15 @@ export async function updateOrg(
   const svc = createServiceClient();
   const { error } = await svc
     .from("orgs")
-    .update({ name: data.name, description: data.description || null, tags: data.tags, contact_email: data.contactEmail || null })
+    .update({
+      name: data.name,
+      description: data.description || null,
+      tags: data.tags,
+      contact_email: data.contactEmail || null,
+      website_url: data.websiteUrl || null,
+      tiktok_url: data.tiktokUrl || null,
+      instagram_url: data.instagramUrl || null,
+    })
     .eq("id", orgId);
 
   if (error) return { ok: false as const, error: error.message };
