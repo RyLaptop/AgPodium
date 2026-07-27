@@ -4,8 +4,6 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { notify } from "@/lib/notifications";
-import { sendEmail } from "@/lib/email/send";
-import { dmRequestEmail } from "@/lib/email/templates";
 
 export async function requestDm(targetUserId: string, initialMessage: string) {
   const supabase = await createClient();
@@ -40,10 +38,7 @@ export async function requestDm(targetUserId: string, initialMessage: string) {
 
     await svc.from("dm_messages").insert({ thread_id: threadId, sender_id: user.id, body: initialMessage.trim() });
 
-    const [{ data: me }, { data: target }] = await Promise.all([
-      supabase.from("users").select("full_name, email").eq("id", user.id).single(),
-      svc.from("users").select("email, full_name").eq("id", targetUserId).single(),
-    ]);
+    const { data: me } = await supabase.from("users").select("full_name, email").eq("id", user.id).single();
     const myName = me?.full_name ?? user.email ?? "Someone";
     await notify([{
       userId: targetUserId,
@@ -52,10 +47,6 @@ export async function requestDm(targetUserId: string, initialMessage: string) {
       body: initialMessage.trim().slice(0, 80),
       link: `/messages/${threadId}`,
     }]);
-    if (target?.email) {
-      const tmpl = dmRequestEmail({ senderName: myName, preview: initialMessage.trim().slice(0, 200), threadPath: `/messages/${threadId}` });
-      await sendEmail({ to: target.email, ...tmpl });
-    }
   }
 
   revalidatePath("/messages");

@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { notify } from "@/lib/notifications";
 import { sendEmail } from "@/lib/email/send";
-import { speakDecisionEmail, waitlistPromotedEmail, orgIncomingSpeakRequestEmail } from "@/lib/email/templates";
+import { orgIncomingSpeakRequestEmail } from "@/lib/email/templates";
 
 export type CreateRequestResult =
   | { ok: true; id: string }
@@ -351,19 +351,6 @@ export async function decideRequest(
       body: m ? `${m.orgs.name} · ${m.title}` : undefined,
       link: `/requests/${id}`,
     }]);
-    if (m) {
-      const { data: requester } = await svc.from("users").select("email, full_name").eq("id", notifReq.requester_user_id).single();
-      if (requester?.email) {
-        const tmpl = speakDecisionEmail({
-          recipientName: requester.full_name ?? requester.email.split("@")[0],
-          orgName: m.orgs.name,
-          meetingTitle: m.title,
-          approved: decision === "approved",
-          requestPath: `/requests/${id}`,
-        });
-        await sendEmail({ to: requester.email, ...tmpl });
-      }
-    }
   }
 
   revalidatePath("/requests");
@@ -549,19 +536,6 @@ export async function cancelApproved(id: string) {
       body: `${meeting.orgs.name} · ${meeting.title} — you're now approved to speak`,
       link: `/requests/${firstWaiter.id}`,
     }]);
-    const { data: waiterUser } = await admin.from("users").select("email, full_name").eq("id", firstWaiter.requester_user_id).single();
-    if (waiterUser?.email) {
-      const { data: meetingFull } = await admin.from("meetings").select("starts_at, location").eq("id", req.meeting_id).single();
-      const tmpl = waitlistPromotedEmail({
-        recipientName: waiterUser.full_name ?? waiterUser.email.split("@")[0],
-        orgName: meeting.orgs.name,
-        meetingTitle: meeting.title,
-        startsAt: meetingFull?.starts_at ?? new Date().toISOString(),
-        location: meetingFull?.location ?? null,
-        requestPath: `/requests/${firstWaiter.id}`,
-      });
-      await sendEmail({ to: waiterUser.email, ...tmpl });
-    }
   }
 
   revalidatePath(`/orgs/${meeting.orgs.slug}/meetings/${req.meeting_id}`);
