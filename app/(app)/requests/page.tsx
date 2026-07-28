@@ -38,6 +38,16 @@ export default async function RequestsPage() {
 
   const myOrgIds = myOrgs.map((o) => o.id);
 
+  // Count total (non-cancelled) meetings per org to enforce the 3-meeting minimum
+  const { data: orgMeetingRows } = myOrgIds.length > 0
+    ? await svc.from("meetings").select("org_id").in("org_id", myOrgIds).is("cancelled_at", null)
+    : { data: [] as { org_id: string }[] };
+  const orgMeetingCountMap = new Map<string, number>();
+  for (const row of orgMeetingRows ?? []) {
+    orgMeetingCountMap.set(row.org_id, (orgMeetingCountMap.get(row.org_id) ?? 0) + 1);
+  }
+  const myOrgsWithCounts = myOrgs.map((o) => ({ ...o, meetingCount: orgMeetingCountMap.get(o.id) ?? 0 }));
+
   const [
     { data: mySpeakReqs },
     { data: incomingSpeakReqs },
@@ -147,7 +157,7 @@ export default async function RequestsPage() {
             <h3 className="text-xl font-semibold">My speaking requests</h3>
             <MakeRequest
               allOrgs={(allOrgs ?? []).map((o) => ({ id: o.id, name: o.name, slug: o.slug }))}
-              myOrgs={myOrgs}
+              myOrgs={myOrgsWithCounts}
             />
           </div>
           {(() => {

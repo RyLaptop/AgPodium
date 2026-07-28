@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { getMeetingsForOrgs, submitSpeakRequests } from "./actions";
 
 type Org = { id: string; name: string; slug: string };
-type MyOrg = { id: string; name: string };
+type MyOrg = { id: string; name: string; meetingCount: number };
 type Meeting = {
   id: string;
   title: string;
@@ -320,19 +320,29 @@ export function MakeRequest({ allOrgs, myOrgs }: { allOrgs: Org[]; myOrgs: MyOrg
           </div>
 
           {myOrgs.length > 0 && (
-            <label className="block">
-              <span className="text-sm font-medium">Speaking on behalf of</span>
+            <div className="block">
+              <label className="text-sm font-medium">Speaking on behalf of</label>
               <select
                 value={speakingAsOrgId}
                 onChange={(e) => setSpeakingAsOrgId(e.target.value)}
                 className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand bg-white"
               >
                 <option value="">Myself (personal)</option>
-                {myOrgs.map((o) => (
-                  <option key={o.id} value={o.id}>{o.name}</option>
-                ))}
+                {myOrgs.map((o) => {
+                  const eligible = o.meetingCount >= 3;
+                  return (
+                    <option key={o.id} value={o.id} disabled={!eligible}>
+                      {o.name}{!eligible ? ` (needs ${3 - o.meetingCount} more meeting${3 - o.meetingCount !== 1 ? "s" : ""})` : ""}
+                    </option>
+                  );
+                })}
               </select>
-            </label>
+              {myOrgs.some((o) => o.meetingCount < 3) && (
+                <p className="mt-1 text-xs text-gray-500">
+                  Orgs must have at least 3 meetings set up to speak on their behalf.
+                </p>
+              )}
+            </div>
           )}
 
           <label className="block">

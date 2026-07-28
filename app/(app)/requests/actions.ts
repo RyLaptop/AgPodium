@@ -70,8 +70,24 @@ export async function submitSpeakRequests(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "Not signed in." };
 
-  // Check fullness server-side for each meeting to set waitlist status
+  // Enforce 3-meeting minimum for org-on-behalf submissions
   const svcCheck = createServiceClient();
+  const requesterOrgIds = [...new Set(targets.map((t) => t.requesterOrgId).filter(Boolean))] as string[];
+  if (requesterOrgIds.length > 0) {
+    const { data: orgMeetings } = await svcCheck.from("meetings")
+      .select("org_id").in("org_id", requesterOrgIds).is("cancelled_at", null);
+    const meetingCounts = new Map<string, number>();
+    for (const row of orgMeetings ?? []) {
+      meetingCounts.set(row.org_id, (meetingCounts.get(row.org_id) ?? 0) + 1);
+    }
+    for (const orgId of requesterOrgIds) {
+      if ((meetingCounts.get(orgId) ?? 0) < 3) {
+        return { ok: false, error: "Your org must have at least 3 meetings set up to speak on its behalf." };
+      }
+    }
+  }
+
+  // Check fullness server-side for each meeting to set waitlist status
   const meetingIds = targets.map((t) => t.meetingId);
   const [{ data: meetingSlots }, { data: approvedCounts }] = await Promise.all([
     svcCheck.from("meetings").select("id, slots_open").in("id", meetingIds),
@@ -190,6 +206,13 @@ export async function createSpeakRequest(
       .maybeSingle();
     if (!mem || !["officer", "director"].includes(mem.role)) {
       return { ok: false, error: "You must be an officer or director to request on behalf of an org." };
+    }
+
+    const svcOrgCheck = createServiceClient();
+    const { data: orgMeetings } = await svcOrgCheck.from("meetings")
+      .select("id").eq("org_id", requesterOrgId).is("cancelled_at", null);
+    if ((orgMeetings?.length ?? 0) < 3) {
+      return { ok: false, error: "Your org must have at least 3 meetings set up to speak on its behalf." };
     }
   }
 
