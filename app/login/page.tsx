@@ -13,6 +13,7 @@ function LoginForm() {
   const [mode, setMode] = useState<"signin" | "signup">(
     searchParams.get("mode") === "signup" ? "signup" : "signin"
   );
+  const [verificationDismissed, setVerificationDismissed] = useState(false);
 
   const [signinState, signinAction, signinPending] = useActionState<
     SignInResult | null,
@@ -26,7 +27,7 @@ function LoginForm() {
 
   const Logo = () => (
     <div className="flex items-center justify-center gap-2.5">
-      <svg width="36" height="36" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" style={{ color: "rgb(var(--color-brand))" }}>
+      <svg width="36" height="36" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" style={{ color: "#3B82F6" }}>
         <circle cx="40" cy="10" r="4.5" fill="currentColor"/>
         <line x1="40" y1="14.5" x2="40" y2="22" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
         <path d="M14 22 L66 22 L60 36 L20 36 Z" fill="#0F172A"/>
@@ -35,13 +36,13 @@ function LoginForm() {
         <path d="M22 62 L58 62 L60 70 L20 70 Z" fill="#0F172A"/>
       </svg>
       <span className="font-bold text-3xl" style={{ letterSpacing: "-0.025em" }}>
-        <span className="text-slate-900">Uni</span><span className="text-brand">Podium</span>
+        <span className="text-slate-900">Uni</span><span className="text-blue-600">Podium</span>
       </span>
     </div>
   );
 
   // Show verification prompt after successful signup
-  if (signupState?.ok && signupState.needsVerification) {
+  if (signupState?.ok && signupState.needsVerification && !verificationDismissed) {
     return (
       <div className="max-w-md w-full space-y-6 text-center">
         <Logo />
@@ -58,8 +59,8 @@ function LoginForm() {
           </p>
         </div>
         <button
-          onClick={() => setMode("signin")}
-          className="text-sm text-brand hover:underline"
+          onClick={() => { setVerificationDismissed(true); setMode("signin"); }}
+          className="text-sm text-blue-600 hover:underline"
         >
           Back to sign in
         </button>
@@ -92,7 +93,7 @@ function LoginForm() {
             required
             autoComplete="email"
             placeholder="[email protected]"
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <input
             type="password"
@@ -100,12 +101,12 @@ function LoginForm() {
             required
             autoComplete="current-password"
             placeholder="Password"
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <button
             type="submit"
             disabled={signinPending}
-            className="w-full px-4 py-3 bg-brand text-white rounded-lg hover:bg-brand-dark disabled:opacity-60 transition"
+            className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-60 transition"
           >
             {signinPending ? "Signing in…" : "Sign in"}
           </button>
@@ -121,7 +122,7 @@ function LoginForm() {
             required
             autoComplete="name"
             placeholder="Display name"
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <input
             type="email"
@@ -129,7 +130,7 @@ function LoginForm() {
             required
             autoComplete="email"
             placeholder="[email protected]"
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <input
             type="password"
@@ -137,12 +138,22 @@ function LoginForm() {
             required
             autoComplete="new-password"
             placeholder="Password (8+ characters)"
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
+          <select
+            name="university"
+            required
+            defaultValue=""
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-700"
+          >
+            <option value="" disabled>Select your university</option>
+            <option value="tamu">Texas A&amp;M University</option>
+            <option value="lsu">Louisiana State University</option>
+          </select>
           <button
             type="submit"
             disabled={signupPending}
-            className="w-full px-4 py-3 bg-brand text-white rounded-lg hover:bg-brand-dark disabled:opacity-60 transition"
+            className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-60 transition"
           >
             {signupPending ? "Creating account…" : "Create account"}
           </button>
@@ -156,14 +167,14 @@ function LoginForm() {
         {mode === "signin" ? (
           <>
             No account?{" "}
-            <button onClick={() => setMode("signup")} className="text-brand hover:underline">
+            <button onClick={() => setMode("signup")} className="text-blue-600 hover:underline">
               Sign up
             </button>
           </>
         ) : (
           <>
             Already have an account?{" "}
-            <button onClick={() => setMode("signin")} className="text-brand hover:underline">
+            <button onClick={() => setMode("signin")} className="text-blue-600 hover:underline">
               Sign in
             </button>
           </>
