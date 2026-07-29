@@ -66,6 +66,35 @@ export async function deleteAccount(): Promise<{ ok: false; error: string } | ne
   if (!user) return { ok: false, error: "Not signed in." };
 
   const svc = createServiceClient();
+
+  // Find orgs where this user is an active director
+  const { data: directorships } = await svc
+    .from("org_members")
+    .select("org_id")
+    .eq("user_id", user.id)
+    .eq("role", "director")
+    .eq("status", "active");
+
+  if (directorships && directorships.length > 0) {
+    const orgIds = directorships.map((d) => d.org_id);
+
+    // Find which of those orgs have at least one OTHER active director
+    const { data: otherDirectors } = await svc
+      .from("org_members")
+      .select("org_id")
+      .in("org_id", orgIds)
+      .neq("user_id", user.id)
+      .eq("role", "director")
+      .eq("status", "active");
+
+    const orgsWithOtherDirectors = new Set((otherDirectors ?? []).map((d) => d.org_id));
+    const soloOrgs = orgIds.filter((id) => !orgsWithOtherDirectors.has(id));
+
+    if (soloOrgs.length > 0) {
+      await svc.from("orgs").delete().in("id", soloOrgs);
+    }
+  }
+
   const { error } = await svc.auth.admin.deleteUser(user.id);
   if (error) return { ok: false, error: error.message };
 
