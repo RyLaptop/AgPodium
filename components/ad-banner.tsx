@@ -24,7 +24,7 @@ export function AdBanner({ variant = "ffac" }: AdBannerProps) {
   if (variant === "calendar") {
     return (
       <div className="w-full overflow-hidden h-[120px] md:h-[160px]">
-        <img src="/ffac-ad-mobile-320x100.svg" alt="Advertisement" className="w-full h-full object-cover md:hidden" />
+        <img src="/new-ad-mobile-320x100.svg" alt="Advertisement" className="w-full h-full object-cover md:hidden" />
         <img src="/ffac-ad-1120x120.svg" alt="Advertisement" className="hidden md:block w-full h-full object-cover" />
       </div>
     );
@@ -32,7 +32,7 @@ export function AdBanner({ variant = "ffac" }: AdBannerProps) {
 
   return (
     <div className="w-full overflow-hidden h-[75px] md:h-[120px]">
-      <img src="/ffac-ad-mobile-320x100.svg" alt="Advertisement" className="w-full h-full object-cover md:hidden" />
+      <img src="/new-ad-mobile-320x100.svg" alt="Advertisement" className="w-full h-full object-cover md:hidden" />
       <img src="/ffac-ad-1120x120.svg" alt="Advertisement" className="hidden md:block w-full h-full object-cover" />
     </div>
   );
