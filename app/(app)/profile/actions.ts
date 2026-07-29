@@ -60,7 +60,7 @@ export async function uploadAvatar(
   return { ok: true, url: `${publicUrl}?t=${Date.now()}` };
 }
 
-export async function deleteAccount(): Promise<{ ok: false; error: string } | never> {
+export async function deleteAccount(): Promise<{ ok: true } | { ok: false; error: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "Not signed in." };
@@ -95,9 +95,10 @@ export async function deleteAccount(): Promise<{ ok: false; error: string } | ne
     }
   }
 
+  // Sign out first while the session is still valid, then hard-delete the user
+  await supabase.auth.signOut();
   const { error } = await svc.auth.admin.deleteUser(user.id);
   if (error) return { ok: false, error: error.message };
 
-  await supabase.auth.signOut();
-  redirect("/");
+  return { ok: true };
 }

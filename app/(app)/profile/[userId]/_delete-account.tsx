@@ -1,16 +1,19 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { deleteAccount } from "../actions";
 
 export function DeleteAccountButton() {
   const [confirming, setConfirming] = useState(false);
   const [pending, startTransition] = useTransition();
+  const router = useRouter();
 
   const confirm = () => {
     startTransition(async () => {
       const res = await deleteAccount();
-      if (!res.ok) alert(res.error);
+      if (res.ok) router.push("/");
+      else alert(res.error);
     });
   };
 
