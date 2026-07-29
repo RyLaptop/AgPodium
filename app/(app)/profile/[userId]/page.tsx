@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -6,6 +7,8 @@ import { EditProfileForm } from "./_edit-profile";
 import { UserAvatar } from "@/components/user-avatar";
 import { MessageButton } from "./_message-button";
 import { DeleteAccountButton } from "./_delete-account";
+import { ChangeUniversitySection } from "./_change-university";
+import type { University } from "@/lib/university";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +18,11 @@ export default async function ProfilePage({
   params: Promise<{ userId: string }>;
 }) {
   const { userId } = await params;
+  const jar = await cookies();
+  const currentUni = (jar.get("uni")?.value ?? "tamu") as University;
+  const lockedUntilStr = jar.get("uni_locked_until")?.value;
+  const lockedUntil = lockedUntilStr ? new Date(lockedUntilStr) : null;
+
   const supabase = await createClient();
   const svc = createServiceClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -147,6 +155,10 @@ export default async function ProfilePage({
             })}
           </ul>
         </section>
+      )}
+
+      {isSelf && (
+        <ChangeUniversitySection currentUni={currentUni} lockedUntil={lockedUntil} />
       )}
 
       <div className="flex items-center justify-between">

@@ -80,7 +80,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                 <span className="font-bold text-[17px]" style={{ letterSpacing: "-0.025em" }}>
                   <span className="text-slate-900">Uni</span><span className="text-brand">Podium</span>
                 </span>
-                <span className="text-[10px] text-gray-400 font-normal">{uniInfo.shortName}</span>
+                <span className="text-[10px] text-gray-400 font-normal">{uniInfo.label}</span>
               </div>
             </Link>
 
