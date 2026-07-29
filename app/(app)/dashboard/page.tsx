@@ -58,6 +58,10 @@ export default async function DashboardPage() {
         </section>
       )}
 
+      <div className="w-full">
+        <img src="/ffac-ad-1120x120.svg" alt="Advertisement" width={1120} height={120} className="w-full h-auto" />
+      </div>
+
       <section>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold">Your orgs</h2>

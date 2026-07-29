@@ -1,0 +1,38 @@
+<svg width="1120" height="104" viewBox="0 0 1120 104" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800&amp;family=Fraunces:wght@800&amp;display=swap');
+      .headline { font-family: 'Fraunces', Georgia, serif; font-weight: 800; }
+      .subline { font-family: 'Inter', -apple-system, sans-serif; font-weight: 500; }
+      .brand { font-family: 'Inter', -apple-system, sans-serif; font-weight: 800; letter-spacing: 0.12em; }
+      .caption { font-family: 'Inter', -apple-system, sans-serif; font-weight: 600; letter-spacing: 0.08em; }
+      .cta { font-family: 'Inter', -apple-system, sans-serif; font-weight: 700; letter-spacing: 0.02em; }
+    </style>
+  </defs>
+
+  <!-- background -->
+  <rect width="1120" height="104" fill="#A62523"/>
+
+  <!-- subtle decorative arc top-right -->
+  <circle cx="1120" cy="0" r="130" fill="#8F1D1B" opacity="0.35"/>
+
+  <!-- LEFT: badge mark -->
+  <circle cx="62" cy="52" r="28" fill="#FFF6EA"/>
+  <circle cx="62" cy="52" r="18.5" fill="none" stroke="#A62523" stroke-width="2.5"/>
+  <path d="M62 59.5 Q51 50 51 43.5 Q51 39 55.5 39 Q60 39 62 43.5 Q64 39 68.5 39 Q73 39 73 43.5 Q73 50 62 59.5 Z" fill="#A62523"/>
+
+  <!-- LEFT: wordmark -->
+  <text x="106" y="47" class="brand" font-size="14" fill="#FFF6EA">FOODIES FOR A CAUSE</text>
+  <text x="106" y="66" class="caption" font-size="10.5" fill="#F5C08A">STUDENT-LED · TAMU CHAPTER</text>
+
+  <!-- divider -->
+  <line x1="358" y1="24" x2="358" y2="80" stroke="#FFF6EA" stroke-opacity="0.25" stroke-width="1"/>
+
+  <!-- MIDDLE: headline + subline -->
+  <text x="390" y="50" class="headline" font-size="32" fill="#FFF6EA">Eat out. Give back.</text>
+  <text x="391" y="74" class="subline" font-size="13" fill="#F5C08A">Dine at partner spots. A cut of your bill funds student-led philanthropy.</text>
+
+  <!-- RIGHT: CTA pill -->
+  <rect x="928" y="32" width="152" height="40" rx="20" fill="#FFF6EA"/>
+  <text x="1004" y="57" class="cta" font-size="14" fill="#A62523" text-anchor="middle">Join us  →</text>
+</svg>

@@ -1,0 +1,38 @@
+<svg width="1120" height="120" viewBox="0 0 1120 120" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800&amp;family=Fraunces:wght@800&amp;display=swap');
+      .headline { font-family: 'Fraunces', Georgia, serif; font-weight: 800; }
+      .subline { font-family: 'Inter', -apple-system, sans-serif; font-weight: 500; }
+      .brand { font-family: 'Inter', -apple-system, sans-serif; font-weight: 800; letter-spacing: 0.12em; }
+      .caption { font-family: 'Inter', -apple-system, sans-serif; font-weight: 600; letter-spacing: 0.08em; }
+      .cta { font-family: 'Inter', -apple-system, sans-serif; font-weight: 700; letter-spacing: 0.02em; }
+    </style>
+  </defs>
+
+  <!-- background -->
+  <rect width="1120" height="120" fill="#A62523"/>
+
+  <!-- subtle decorative arc top-right -->
+  <circle cx="1120" cy="0" r="140" fill="#8F1D1B" opacity="0.35"/>
+
+  <!-- LEFT: badge mark -->
+  <circle cx="62" cy="60" r="30" fill="#FFF6EA"/>
+  <circle cx="62" cy="60" r="20" fill="none" stroke="#A62523" stroke-width="2.5"/>
+  <path d="M62 68 Q50 58 50 51 Q50 46 55 46 Q60 46 62 51 Q64 46 69 46 Q74 46 74 51 Q74 58 62 68 Z" fill="#A62523"/>
+
+  <!-- LEFT: wordmark -->
+  <text x="108" y="54" class="brand" font-size="14" fill="#FFF6EA">FOODIES FOR A CAUSE</text>
+  <text x="108" y="74" class="caption" font-size="10.5" fill="#F5C08A">STUDENT-LED · TAMU CHAPTER</text>
+
+  <!-- divider -->
+  <line x1="360" y1="30" x2="360" y2="90" stroke="#FFF6EA" stroke-opacity="0.25" stroke-width="1"/>
+
+  <!-- MIDDLE: headline + subline -->
+  <text x="392" y="58" class="headline" font-size="34" fill="#FFF6EA">Eat out. Give back.</text>
+  <text x="393" y="83" class="subline" font-size="13" fill="#F5C08A">Dine at partner spots. A cut of your bill funds student-led philanthropy.</text>
+
+  <!-- RIGHT: CTA pill -->
+  <rect x="928" y="40" width="152" height="40" rx="20" fill="#FFF6EA"/>
+  <text x="1004" y="65" class="cta" font-size="14" fill="#A62523" text-anchor="middle">Join us  →</text>
+</svg>
