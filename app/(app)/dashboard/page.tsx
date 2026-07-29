@@ -58,8 +58,8 @@ export default async function DashboardPage() {
         </section>
       )}
 
-      <div className="w-full">
-        <img src="/ffac-ad-1120x120.svg" alt="Advertisement" width={1120} height={120} className="w-full h-auto" />
+      <div className="w-full overflow-hidden h-[75px] md:h-[120px]">
+        <img src="/ffac-ad-1120x120.svg" alt="Advertisement" width={1120} height={120} className="w-full h-full object-cover" />
       </div>
 
       <section>
