@@ -1,8 +1,8 @@
 const AD_LINKS = {
-  ffac: "https://foodiesforacause.com",
+  ffac: "https://foodiesforacause.org",
   apartment: "https://aspirereserve.com/",
   footer: "https://www.alz.org/?form=FUNDHYMMBXU",
-  calendar: "https://foodiesforacause.com",
+  calendar: "https://foodiesforacause.org",
 };
 
 type AdBannerProps = {
