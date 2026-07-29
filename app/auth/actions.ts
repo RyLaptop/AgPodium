@@ -89,6 +89,24 @@ export async function signUpWithPassword(
   redirect("/dashboard");
 }
 
+export async function resendVerificationEmail(
+  email: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!email) return { ok: false, error: "No email provided." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resend({
+    type: "signup",
+    email,
+    options: {
+      emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/auth/confirm`,
+    },
+  });
+
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
 export async function signOut() {
   const supabase = await createClient();
   await supabase.auth.signOut();

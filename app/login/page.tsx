@@ -1,12 +1,101 @@
 "use client";
 
-import { Suspense, useActionState, useState } from "react";
+import { Suspense, useActionState, useEffect, useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   signInWithPassword,
   signUpWithPassword,
+  resendVerificationEmail,
   type SignInResult,
 } from "@/app/auth/actions";
+
+function Logo() {
+  return (
+    <div className="flex items-center justify-center gap-2.5">
+      <svg width="36" height="36" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" style={{ color: "#3B82F6" }}>
+        <circle cx="40" cy="10" r="4.5" fill="currentColor"/>
+        <line x1="40" y1="14.5" x2="40" y2="22" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
+        <path d="M14 22 L66 22 L60 36 L20 36 Z" fill="#0F172A"/>
+        <line x1="26" y1="30" x2="54" y2="30" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+        <path d="M30 36 L50 36 L47 62 L33 62 Z" fill="#0F172A"/>
+        <path d="M22 62 L58 62 L60 70 L20 70 Z" fill="#0F172A"/>
+      </svg>
+      <span className="font-bold text-3xl" style={{ letterSpacing: "-0.025em" }}>
+        <span className="text-slate-900">Uni</span><span className="text-blue-600">Podium</span>
+      </span>
+    </div>
+  );
+}
+
+function VerificationScreen({ email, onBack }: { email: string; onBack: () => void }) {
+  const [secondsLeft, setSecondsLeft] = useState(30);
+  const [resendStatus, setResendStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [resendError, setResendError] = useState("");
+  const [, startTransition] = useTransition();
+
+  useEffect(() => {
+    if (secondsLeft <= 0) return;
+    const t = setTimeout(() => setSecondsLeft((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [secondsLeft]);
+
+  const handleResend = () => {
+    setResendStatus("sending");
+    startTransition(async () => {
+      const res = await resendVerificationEmail(email);
+      if (res.ok) {
+        setResendStatus("sent");
+        setSecondsLeft(30);
+      } else {
+        setResendStatus("error");
+        setResendError(res.error);
+      }
+    });
+  };
+
+  return (
+    <div className="max-w-md w-full space-y-6 text-center">
+      <Logo />
+      <div className="bg-green-50 border border-green-200 rounded-xl px-6 py-8 space-y-3">
+        <p className="text-2xl">📬</p>
+        <h2 className="font-semibold text-gray-900">Check your email</h2>
+        <p className="text-sm text-gray-600">
+          We sent a verification link to{" "}
+          <span className="font-medium text-gray-800">{email}</span>.
+          Click it to activate your account.
+        </p>
+        <p className="text-xs text-gray-400 pt-2">
+          Didn&apos;t get it? Check your spam folder.
+        </p>
+        <div className="pt-1">
+          {secondsLeft > 0 ? (
+            <p className="text-xs text-gray-400">
+              {resendStatus === "sent" ? "Email sent! Resend in " : "Resend in "}
+              <span className="font-medium text-gray-600">{secondsLeft}s</span>
+            </p>
+          ) : (
+            <button
+              onClick={handleResend}
+              disabled={resendStatus === "sending"}
+              className="text-sm text-blue-600 hover:underline disabled:opacity-50"
+            >
+              {resendStatus === "sending" ? "Sending…" : "Send again"}
+            </button>
+          )}
+          {resendStatus === "error" && (
+            <p className="text-xs text-red-500 mt-1">{resendError}</p>
+          )}
+        </div>
+      </div>
+      <button
+        onClick={onBack}
+        className="text-sm text-blue-600 hover:underline"
+      >
+        Back to sign in
+      </button>
+    </div>
+  );
+}
 
 function LoginForm() {
   const searchParams = useSearchParams();
@@ -25,46 +114,13 @@ function LoginForm() {
     FormData
   >(signUpWithPassword, null);
 
-  const Logo = () => (
-    <div className="flex items-center justify-center gap-2.5">
-      <svg width="36" height="36" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" style={{ color: "#3B82F6" }}>
-        <circle cx="40" cy="10" r="4.5" fill="currentColor"/>
-        <line x1="40" y1="14.5" x2="40" y2="22" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
-        <path d="M14 22 L66 22 L60 36 L20 36 Z" fill="#0F172A"/>
-        <line x1="26" y1="30" x2="54" y2="30" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-        <path d="M30 36 L50 36 L47 62 L33 62 Z" fill="#0F172A"/>
-        <path d="M22 62 L58 62 L60 70 L20 70 Z" fill="#0F172A"/>
-      </svg>
-      <span className="font-bold text-3xl" style={{ letterSpacing: "-0.025em" }}>
-        <span className="text-slate-900">Uni</span><span className="text-blue-600">Podium</span>
-      </span>
-    </div>
-  );
-
   // Show verification prompt after successful signup
   if (signupState?.ok && signupState.needsVerification && !verificationDismissed) {
     return (
-      <div className="max-w-md w-full space-y-6 text-center">
-        <Logo />
-        <div className="bg-green-50 border border-green-200 rounded-xl px-6 py-8 space-y-3">
-          <p className="text-2xl">📬</p>
-          <h2 className="font-semibold text-gray-900">Check your email</h2>
-          <p className="text-sm text-gray-600">
-            We sent a verification link to{" "}
-            <span className="font-medium text-gray-800">{signupState.email}</span>.
-            Click it to activate your account.
-          </p>
-          <p className="text-xs text-gray-400 pt-2">
-            Didn&apos;t get it? Check your spam folder.
-          </p>
-        </div>
-        <button
-          onClick={() => { setVerificationDismissed(true); setMode("signin"); }}
-          className="text-sm text-blue-600 hover:underline"
-        >
-          Back to sign in
-        </button>
-      </div>
+      <VerificationScreen
+        email={signupState.email}
+        onBack={() => { setVerificationDismissed(true); setMode("signin"); }}
+      />
     );
   }
 
