@@ -11,6 +11,7 @@ type UserRow = {
   avatar_url: string | null;
   is_site_admin: boolean;
   created_at: string;
+  last_sign_in_at: string | null;
 };
 
 export function UserList({ users }: { users: UserRow[] }) {
@@ -140,6 +141,9 @@ export function UserList({ users }: { users: UserRow[] }) {
                     {u.full_name ?? <span className="text-gray-400 italic">No name</span>}
                     {u.is_site_admin && (
                       <span className="ml-1.5 text-xs px-1.5 py-0.5 bg-brand/10 text-brand rounded">admin</span>
+                    )}
+                    {u.last_sign_in_at && new Date(u.last_sign_in_at) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) && (
+                      <span className="ml-1.5 text-xs px-1.5 py-0.5 bg-green-100 text-green-700 rounded">MAU</span>
                     )}
                   </p>
                   <p className="text-xs text-gray-500 truncate">{u.email}</p>

@@ -30,7 +30,7 @@ export default async function BulletinAdminPage() {
 
   const uni = await getUniversity();
   const admin = createServiceClient();
-  const [{ data: pendingPosts }, { data: pendingOrgs }, { data: allUsers }] = await Promise.all([
+  const [{ data: pendingPosts }, { data: pendingOrgs }, { data: allUsers }, authUsersResult] = await Promise.all([
     admin.from("bulletin_posts")
       .select("id, event_title, event_description, event_at, event_location, created_at, users!bulletin_posts_submitter_id_fkey(full_name, email), orgs(name)")
       .eq("status", "pending")
@@ -44,7 +44,12 @@ export default async function BulletinAdminPage() {
     admin.from("users")
       .select("id, email, full_name, avatar_url, is_site_admin, created_at")
       .order("created_at", { ascending: false }),
+    admin.auth.admin.listUsers({ perPage: 1000 }),
   ]);
+
+  const lastSignInMap = new Map(
+    (authUsersResult.data?.users ?? []).map((u) => [u.id, u.last_sign_in_at ?? null])
+  );
 
   const pendingOrgsList = (pendingOrgs ?? []).map((o) => {
     const members = o.org_members as unknown as { user_id: string; role: string; users: { full_name: string | null; email: string } }[];
@@ -61,8 +66,11 @@ export default async function BulletinAdminPage() {
     };
   });
 
-  const usersList = (allUsers ?? []) as {
-    id: string; email: string; full_name: string | null; avatar_url: string | null; is_site_admin: boolean; created_at: string;
+  const usersList = (allUsers ?? []).map((u) => ({
+    ...u,
+    last_sign_in_at: lastSignInMap.get(u.id) ?? null,
+  })) as {
+    id: string; email: string; full_name: string | null; avatar_url: string | null; is_site_admin: boolean; created_at: string; last_sign_in_at: string | null;
   }[];
 
   return (
