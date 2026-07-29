@@ -97,6 +97,10 @@ export async function deleteAccount(): Promise<{ ok: true } | { ok: false; error
 
   // Sign out first while the session is still valid, then hard-delete the user
   await supabase.auth.signOut();
+
+  // Explicitly delete public profile row in case there's no cascade from auth.users
+  await svc.from("users").delete().eq("id", user.id);
+
   const { error } = await svc.auth.admin.deleteUser(user.id);
   if (error) return { ok: false, error: error.message };
 
