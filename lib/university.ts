@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 export type University = "tamu" | "lsu";
 
 export const UNIVERSITIES = {
-  tamu: { name: "Texas A&M University", shortName: "Texas A&M", label: "TAMU" },
+  tamu: { name: "Texas A&M University", shortName: "Texas A&M", label: "Texas A&M" },
   lsu:  { name: "Louisiana State University", shortName: "Louisiana State", label: "LSU" },
 } as const satisfies Record<University, { name: string; shortName: string; label: string }>;
 
