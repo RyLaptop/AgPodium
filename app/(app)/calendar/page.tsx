@@ -64,13 +64,17 @@ export default async function CalendarPage() {
   ];
 
   return (
-    <div className="max-w-2xl space-y-6">
-      <h1 className="text-3xl font-bold">Calendar</h1>
-      <p className="text-gray-600 -mt-4">
-        Meetings from your orgs and all upcoming bulletin events.
-      </p>
+    <div className="space-y-6">
+      <div className="max-w-2xl">
+        <h1 className="text-3xl font-bold">Calendar</h1>
+        <p className="text-gray-600 mt-1">
+          Meetings from your orgs and all upcoming bulletin events.
+        </p>
+      </div>
       <AdBanner />
-      <Calendar events={events} />
+      <div className="max-w-2xl">
+        <Calendar events={events} />
+      </div>
     </div>
   );
 }
