@@ -1,0 +1,22 @@
+<svg width="320" height="50" viewBox="0 0 320 50" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@700&amp;family=Fraunces:wght@800&amp;display=swap');
+    </style>
+  </defs>
+
+  <!-- background -->
+  <rect width="320" height="50" fill="#A62523"/>
+
+  <!-- badge mark -->
+  <circle cx="24" cy="25" r="15" fill="#FFF6EA"/>
+  <circle cx="24" cy="25" r="10" fill="none" stroke="#A62523" stroke-width="1.5"/>
+  <path d="M24 29.5 Q18.5 24 18.5 20.5 Q18.5 18 20.5 18 Q22.5 18 24 20.5 Q25.5 18 27.5 18 Q29.5 18 29.5 20.5 Q29.5 24 24 29.5 Z" fill="#A62523"/>
+
+  <!-- headline -->
+  <text x="46" y="32" font-family="Fraunces, Georgia, serif" font-weight="800" font-size="16" fill="#FFF6EA">Eat out. Give back.</text>
+
+  <!-- CTA pill -->
+  <rect x="248" y="13" width="60" height="24" rx="12" fill="#FFF6EA"/>
+  <text x="278" y="29" font-family="Inter, sans-serif" font-weight="700" font-size="11" fill="#A62523" text-anchor="middle">Join  →</text>
+</svg>

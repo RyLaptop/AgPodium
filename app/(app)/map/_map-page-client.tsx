@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createBrowserClient } from "@supabase/ssr";
 import { MapWrapper } from "./_map-wrapper";
+import { AdBanner } from "@/components/ad-banner";
 
 type MapMeeting = {
   id: string;
@@ -143,6 +144,7 @@ export function MapPageClient() {
           <div className="isolate w-full rounded-xl overflow-hidden border border-gray-200" style={{ height: 420 }}>
             <MapWrapper meetings={meetings} />
           </div>
+          <AdBanner />
           <div className="grid sm:grid-cols-2 gap-3">
             {meetings.map((m) => (
               <Link

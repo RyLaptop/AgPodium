@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { tagPill, tagLabel, TAG_COLORS } from "./_tag-colors";
+import { AdBanner } from "@/components/ad-banner";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const ONE_WEEK = 7 * 24 * 60 * 60 * 1000;
@@ -60,6 +61,8 @@ export function OrgSearch({ orgs }: { orgs: Org[] }) {
         placeholder="Search orgs..."
         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand"
       />
+
+      <AdBanner />
 
       {/* Filters row */}
       <div className="flex flex-wrap gap-2 items-center text-sm">

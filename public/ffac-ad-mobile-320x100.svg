@@ -1,0 +1,25 @@
+<svg width="320" height="100" viewBox="0 0 320 100" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800&amp;family=Fraunces:wght@800&amp;display=swap');
+    </style>
+  </defs>
+
+  <!-- background -->
+  <rect width="320" height="100" fill="#A62523"/>
+
+  <!-- badge mark -->
+  <circle cx="34" cy="50" r="22" fill="#FFF6EA"/>
+  <circle cx="34" cy="50" r="14.5" fill="none" stroke="#A62523" stroke-width="2"/>
+  <path d="M34 56 Q26 49 26 44 Q26 40.5 29 40.5 Q32.5 40.5 34 44 Q35.5 40.5 39 40.5 Q42 40.5 42 44 Q42 49 34 56 Z" fill="#A62523"/>
+
+  <!-- brand micro-line -->
+  <text x="66" y="34" font-family="Inter, sans-serif" font-weight="800" font-size="9" letter-spacing="1.2" fill="#F5C08A">FOODIES FOR A CAUSE</text>
+
+  <!-- headline -->
+  <text x="66" y="62" font-family="Fraunces, Georgia, serif" font-weight="800" font-size="20" fill="#FFF6EA">Eat out. Give back.</text>
+
+  <!-- CTA pill -->
+  <rect x="234" y="32" width="72" height="36" rx="18" fill="#FFF6EA"/>
+  <text x="270" y="55" font-family="Inter, sans-serif" font-weight="700" font-size="12" fill="#A62523" text-anchor="middle">Join  →</text>
+</svg>

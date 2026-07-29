@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { Calendar, type CalEvent } from "./_calendar";
+import { AdBanner } from "@/components/ad-banner";
 
 export const dynamic = "force-dynamic";
 
@@ -68,6 +69,7 @@ export default async function CalendarPage() {
       <p className="text-gray-600 -mt-4">
         Meetings from your orgs and all upcoming bulletin events.
       </p>
+      <AdBanner />
       <Calendar events={events} />
     </div>
   );

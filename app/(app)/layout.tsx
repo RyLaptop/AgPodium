@@ -7,6 +7,7 @@ import { MobileNav } from "./_mobile-nav";
 import { NavLink } from "./_nav-link";
 import { AuthGateProvider } from "./_auth-gate";
 import { getUniversity, UNIVERSITIES } from "@/lib/university";
+import { AdBanner } from "@/components/ad-banner";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const uni = await getUniversity();
@@ -149,9 +150,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           {children}
         </main>
 
-        <div className="w-full overflow-hidden h-[60px] md:h-[94px]">
-          <img src="/ffac-ad-1120x104.svg" alt="Advertisement" width={1120} height={104} className="w-full h-full object-contain md:object-cover" />
-        </div>
+        <AdBanner variant="footer" />
       </div>
     </AuthGateProvider>
   );

@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { BulletinCarousel } from "./_bulletin-carousel";
 import { getUniversity, UNIVERSITIES } from "@/lib/university";
+import { AdBanner } from "@/components/ad-banner";
 
 export default async function DashboardPage() {
   const uni = await getUniversity();
@@ -58,9 +59,7 @@ export default async function DashboardPage() {
         </section>
       )}
 
-      <div className="w-full overflow-hidden h-[75px] md:h-[120px]">
-        <img src="/ffac-ad-1120x120.svg" alt="Advertisement" width={1120} height={120} className="w-full h-full object-cover" />
-      </div>
+      <AdBanner />
 
       <section>
         <div className="flex items-center justify-between mb-4">

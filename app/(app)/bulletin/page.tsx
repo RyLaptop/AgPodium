@@ -5,6 +5,7 @@ import { ClearBulletinPost } from "./_clear-post";
 import { PostActions } from "./_post-actions";
 import { AuthGatedLink } from "@/app/(app)/_auth-gate";
 import { getUniversity } from "@/lib/university";
+import { AdBanner } from "@/components/ad-banner";
 
 export const dynamic = "force-dynamic";
 
@@ -102,6 +103,8 @@ export default async function BulletinPage({
           </AuthGatedLink>
         </div>
       </div>
+
+      <AdBanner />
 
       {submitted && (
         <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
