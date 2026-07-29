@@ -2,11 +2,10 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { createServiceClient } from "@/lib/supabase/service";
 import { isEmailAllowed } from "@/lib/auth/allowed-domains";
 
 export type SignInResult =
-  | { ok: true; email: string }
+  | { ok: true; email: string; needsVerification?: boolean }
   | { ok: false; error: string };
 
 export async function signInWithPassword(
@@ -20,13 +19,16 @@ export async function signInWithPassword(
     return { ok: false, error: "Enter your email and password." };
   }
   if (!isEmailAllowed(email)) {
-    return { ok: false, error: "Only TAMU emails are allowed right now." };
+    return { ok: false, error: "That email domain isn't allowed on this platform." };
   }
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
+    if (error.message.toLowerCase().includes("email not confirmed")) {
+      return { ok: false, error: "Please verify your email before signing in. Check your inbox for a confirmation link." };
+    }
     return { ok: false, error: error.message };
   }
   redirect("/dashboard");
@@ -47,32 +49,32 @@ export async function signUpWithPassword(
     return { ok: false, error: "Enter a display name." };
   }
   if (!isEmailAllowed(email)) {
-    return { ok: false, error: "Only TAMU emails are allowed right now." };
+    return { ok: false, error: "That email domain isn't allowed on this platform." };
+  }
+  if (password.length < 8) {
+    return { ok: false, error: "Password must be at least 8 characters." };
   }
 
-  const admin = createServiceClient();
-  const { error: createError } = await admin.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
-    user_metadata: { full_name: name },
-  });
-
-  if (createError && !createError.message.includes("already registered")) {
-    return { ok: false, error: createError.message };
-  }
-
-  // Sign in immediately with the session client so cookies are set.
   const supabase = await createClient();
-  const { error: signInError } = await supabase.auth.signInWithPassword({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
+    options: {
+      data: { full_name: name },
+      emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/auth/confirm`,
+    },
   });
 
-  if (signInError) {
-    return { ok: false, error: signInError.message };
+  if (error) {
+    return { ok: false, error: error.message };
   }
 
+  // No session means Supabase sent a verification email — tell the UI to show the check-inbox screen
+  if (!data.session) {
+    return { ok: true, email, needsVerification: true };
+  }
+
+  // Email confirmation is disabled in the Supabase project — sign in happened immediately
   redirect("/dashboard");
 }
 
