@@ -136,9 +136,12 @@ export function MapPageClient() {
       </div>
 
       {meetings.length === 0 ? (
-        <div className="border border-dashed border-gray-300 rounded-xl p-8 text-center text-gray-500">
-          <p>No upcoming meetings. <Link href="/orgs" className="text-brand hover:underline">Browse orgs</Link> to join some.</p>
-        </div>
+        <>
+          <div className="border border-dashed border-gray-300 rounded-xl p-8 text-center text-gray-500">
+            <p>No upcoming meetings. <Link href="/orgs" className="text-brand hover:underline">Browse orgs</Link> to join some.</p>
+          </div>
+          <AdBanner variant="apartment" />
+        </>
       ) : (
         <div className="space-y-4">
           <div className="isolate w-full rounded-xl overflow-hidden border border-gray-200" style={{ height: 420 }}>

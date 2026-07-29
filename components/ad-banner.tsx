@@ -1,39 +1,39 @@
+const AD_LINKS = {
+  ffac: "https://foodiesforacause.com",
+  apartment: "https://aspirereserve.com/",
+  footer: "https://www.alz.org/?form=FUNDHYMMBXU",
+  calendar: "https://foodiesforacause.com",
+};
+
 type AdBannerProps = {
   variant?: "ffac" | "apartment" | "footer" | "calendar";
 };
 
 export function AdBanner({ variant = "ffac" }: AdBannerProps) {
+  const href = AD_LINKS[variant];
+
   if (variant === "footer") {
     return (
-      <div className="w-full overflow-hidden h-[50px] md:h-[94px]">
+      <a href={href} target="_blank" rel="noopener noreferrer" className="block w-full overflow-hidden h-[50px] md:h-[94px]">
         <img src="/stillbright-ad-mobile-320x50.svg" alt="Advertisement" className="md:hidden" style={{ width: "100%", height: "50px" }} />
         <img src="/stillbright-ad-1120x104.svg" alt="Advertisement" className="hidden md:block w-full h-full object-cover" />
-      </div>
+      </a>
     );
   }
 
   if (variant === "apartment") {
     return (
-      <div className="w-full overflow-hidden h-[75px] md:h-[120px]">
+      <a href={href} target="_blank" rel="noopener noreferrer" className="block w-full overflow-hidden h-[75px] md:h-[120px]">
         <img src="/theapartment-ad-mobile-320x100.svg" alt="Advertisement" className="w-full h-full object-cover md:hidden" />
         <img src="/theapartment-ad-1120x120.svg" alt="Advertisement" className="hidden md:block w-full h-full object-cover" />
-      </div>
-    );
-  }
-
-  if (variant === "calendar") {
-    return (
-      <div className="w-full overflow-hidden h-[120px] md:h-[160px]">
-        <img src="/new-ad-mobile-320x100.svg" alt="Advertisement" className="w-full h-full object-cover md:hidden" />
-        <img src="/ffac-ad-1120x120.svg" alt="Advertisement" className="hidden md:block w-full h-full object-cover" />
-      </div>
+      </a>
     );
   }
 
   return (
-    <div className="w-full overflow-hidden h-[75px] md:h-[120px]">
+    <a href={href} target="_blank" rel="noopener noreferrer" className="block w-full overflow-hidden h-[75px] md:h-[120px]">
       <img src="/new-ad-mobile-320x100.svg" alt="Advertisement" className="w-full h-full object-cover md:hidden" />
       <img src="/ffac-ad-1120x120.svg" alt="Advertisement" className="hidden md:block w-full h-full object-cover" />
-    </div>
+    </a>
   );
 }

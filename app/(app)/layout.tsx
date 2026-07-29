@@ -141,6 +141,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                 isAdmin={isAdmin}
                 userId={user?.id ?? null}
                 displayName={displayName}
+                uniLabel={uniInfo.label}
               />
             </div>
           </div>
