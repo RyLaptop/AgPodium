@@ -405,11 +405,20 @@ export async function clearRequest(id: string) {
 
 export async function cancelRequest(id: string) {
   const supabase = await createClient();
-  const { error } = await supabase
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not signed in" };
+
+  const admin = createServiceClient();
+  const { error, count } = await admin
     .from("speak_requests")
     .update({ status: "cancelled" })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("requester_user_id", user.id)
+    .in("status", ["pending", "waitlisted"]);
+
   if (error) return { ok: false as const, error: error.message };
+  if (count === 0) return { ok: false as const, error: "Request not found or cannot be cancelled." };
+
   revalidatePath("/requests");
   revalidatePath(`/requests/${id}`);
   return { ok: true as const };
