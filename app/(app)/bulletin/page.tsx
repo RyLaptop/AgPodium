@@ -17,6 +17,7 @@ type Post = {
   event_description: string | null;
   event_at: string;
   event_location: string | null;
+  thumbnail_url: string | null;
   orgs: { name: string; slug: string } | null;
 };
 
@@ -38,7 +39,7 @@ export default async function BulletinPage({
     await Promise.all([
       svc
         .from("bulletin_posts")
-        .select("id, submitter_id, org_id, event_title, event_description, event_at, event_location, orgs(name, slug)")
+        .select("id, submitter_id, org_id, event_title, event_description, event_at, event_location, thumbnail_url, orgs(name, slug)")
         .eq("status", "approved")
         .eq("university", uni)
         .gte("event_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
@@ -153,21 +154,30 @@ export default async function BulletinPage({
                   return (
                     <li
                       key={p.id}
-                      className="border border-gray-200 rounded-lg p-4"
+                      className="border border-gray-200 rounded-lg p-4 hover:border-brand transition"
                     >
                       <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium">{p.event_title}</p>
-                          {p.event_description && (
-                            <p className="text-sm text-gray-600 mt-1">
-                              {p.event_description}
-                            </p>
+                        <Link href={`/bulletin/${p.id}`} className="flex-1 min-w-0 flex gap-3">
+                          {p.thumbnail_url && (
+                            <img
+                              src={p.thumbnail_url}
+                              alt=""
+                              className="w-16 h-16 rounded-lg object-cover shrink-0"
+                            />
                           )}
-                          <p className="text-xs text-gray-500 mt-2">
-                            {p.orgs?.name ? `${p.orgs.name} · ` : ""}
-                            {p.event_location ?? "Location TBD"}
-                          </p>
-                        </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium hover:text-brand transition">{p.event_title}</p>
+                            {p.event_description && (
+                              <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+                                {p.event_description}
+                              </p>
+                            )}
+                            <p className="text-xs text-gray-500 mt-2">
+                              {p.orgs?.name ? `${p.orgs.name} · ` : ""}
+                              {p.event_location ?? "Location TBD"}
+                            </p>
+                          </div>
+                        </Link>
                         <div className="flex items-center gap-2 shrink-0">
                           <span className="text-xs text-gray-500">
                             {new Date(p.event_at).toLocaleTimeString([], {

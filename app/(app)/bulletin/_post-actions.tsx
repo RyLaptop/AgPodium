@@ -16,9 +16,10 @@ type Props = {
   description: string | null;
   eventAt: string;
   location: string | null;
+  redirectAfterDelete?: string;
 };
 
-export function PostActions({ postId, title, description, eventAt, location }: Props) {
+export function PostActions({ postId, title, description, eventAt, location, redirectAfterDelete }: Props) {
   const [editing, setEditing] = useState(false);
   const [pendingCancel, startCancel] = useTransition();
   const [pendingSave, startSave] = useTransition();
@@ -34,6 +35,7 @@ export function PostActions({ postId, title, description, eventAt, location }: P
     startCancel(async () => {
       const res = await cancelBulletinPost(postId);
       if (!res.ok) alert(res.error);
+      else if (redirectAfterDelete) router.push(redirectAfterDelete);
       else router.refresh();
     });
   };

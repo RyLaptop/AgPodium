@@ -20,6 +20,10 @@ export async function submitBulletinPost(
   const eventAtStr = String(formData.get("event_at") ?? "").trim();
   const eventLocation = String(formData.get("event_location") ?? "").trim();
   const orgId = String(formData.get("org_id") ?? "").trim();
+  const websiteUrl = String(formData.get("website_url") ?? "").trim() || null;
+  const instagramUrl = String(formData.get("instagram_url") ?? "").trim() || null;
+  const thumbnailFile = formData.get("thumbnail") as File | null;
+  const bannerFile = formData.get("banner") as File | null;
 
   if (eventTitle.length < 3) {
     return { ok: false, error: "Title is too short (min 3 chars)." };
@@ -56,6 +60,8 @@ export async function submitBulletinPost(
     }
   }
 
+  const svc = createServiceClient();
+
   const { data, error } = await supabase
     .from("bulletin_posts")
     .insert({
@@ -65,13 +71,42 @@ export async function submitBulletinPost(
       event_description: eventDescription || null,
       event_at: eventAt.toISOString(),
       event_location: eventLocation || null,
+      website_url: websiteUrl,
+      instagram_url: instagramUrl,
       status: "pending",
       university: uni,
     })
     .select("id")
     .single();
 
-  if (error) return { ok: false, error: error.message };
+  if (error || !data) return { ok: false, error: error?.message ?? "Insert failed." };
+
+  // Upload images to storage and update post with URLs
+  const postId = data.id;
+  const imageUpdates: { thumbnail_url?: string; banner_url?: string } = {};
+
+  async function uploadImage(file: File, slot: "thumbnail" | "banner") {
+    if (!file || file.size === 0) return;
+    const ext = file.name.split(".").pop() ?? "jpg";
+    const path = `${postId}/${slot}.${ext}`;
+    const bytes = await file.arrayBuffer();
+    const { error: uploadErr } = await svc.storage
+      .from("bulletin-images")
+      .upload(path, bytes, { contentType: file.type, upsert: true });
+    if (!uploadErr) {
+      const { data: { publicUrl } } = svc.storage.from("bulletin-images").getPublicUrl(path);
+      imageUpdates[`${slot}_url` as "thumbnail_url" | "banner_url"] = publicUrl;
+    }
+  }
+
+  await Promise.all([
+    thumbnailFile && thumbnailFile.size > 0 ? uploadImage(thumbnailFile, "thumbnail") : Promise.resolve(),
+    bannerFile && bannerFile.size > 0 ? uploadImage(bannerFile, "banner") : Promise.resolve(),
+  ]);
+
+  if (Object.keys(imageUpdates).length > 0) {
+    await svc.from("bulletin_posts").update(imageUpdates).eq("id", postId);
+  }
 
   revalidatePath("/bulletin");
   redirect("/bulletin?submitted=1");

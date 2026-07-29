@@ -24,7 +24,7 @@ export default async function DashboardPage() {
       : Promise.resolve({ data: [] }),
     svc
       .from("bulletin_posts")
-      .select("id, event_title, event_description, event_at, event_location, orgs(name)")
+      .select("id, event_title, event_description, event_at, event_location, thumbnail_url, orgs(name)")
       .eq("status", "approved")
       .eq("university", uni)
       .gte("event_at", new Date().toISOString())
@@ -40,6 +40,7 @@ export default async function DashboardPage() {
     event_description: p.event_description ?? null,
     event_at: p.event_at,
     event_location: p.event_location ?? null,
+    thumbnail_url: (p as unknown as { thumbnail_url: string | null }).thumbnail_url ?? null,
     org_name: (p.orgs as { name: string } | null)?.name ?? null,
   }));
 
