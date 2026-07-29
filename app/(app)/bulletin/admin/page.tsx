@@ -5,6 +5,7 @@ import { ReviewQueue } from "./_review-queue";
 import { OrgApprovalQueue } from "./_org-approval";
 import { UserList } from "./_user-list";
 import { TestEmailButton } from "./_test-email";
+import { getUniversity } from "@/lib/university";
 
 export const dynamic = "force-dynamic";
 
@@ -27,15 +28,18 @@ export default async function BulletinAdminPage() {
     );
   }
 
+  const uni = await getUniversity();
   const admin = createServiceClient();
   const [{ data: pendingPosts }, { data: pendingOrgs }, { data: allUsers }] = await Promise.all([
     admin.from("bulletin_posts")
       .select("id, event_title, event_description, event_at, event_location, created_at, users!bulletin_posts_submitter_id_fkey(full_name, email), orgs(name)")
       .eq("status", "pending")
+      .eq("university", uni)
       .order("created_at", { ascending: true }),
     admin.from("orgs")
       .select("id, name, slug, description, tags, created_at, org_members(user_id, role, users(full_name, email))")
       .eq("status", "pending")
+      .eq("university", uni)
       .order("created_at", { ascending: true }),
     admin.from("users")
       .select("id, email, full_name, avatar_url, is_site_admin, created_at")

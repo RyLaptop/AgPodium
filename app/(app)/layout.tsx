@@ -6,12 +6,11 @@ import { UserAvatar } from "@/components/user-avatar";
 import { MobileNav } from "./_mobile-nav";
 import { NavLink } from "./_nav-link";
 import { AuthGateProvider } from "./_auth-gate";
+import { getUniversity, UNIVERSITIES } from "@/lib/university";
 
-export default async function AppLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default async function AppLayout({ children }: { children: React.ReactNode }) {
+  const uni = await getUniversity();
+  const uniInfo = UNIVERSITIES[uni];
   const supabase = await createClient();
   const {
     data: { user },
@@ -69,17 +68,20 @@ export default async function AppLayout({
         <header className="border-b border-gray-100 bg-white sticky top-0 z-40">
           <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
             <Link href="/dashboard" className="flex items-center gap-2 shrink-0">
-              <svg width="26" height="26" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="40" cy="10" r="4.5" fill="#3B82F6"/>
-                <line x1="40" y1="14.5" x2="40" y2="22" stroke="#3B82F6" strokeWidth="2.5" strokeLinecap="round"/>
+              <svg width="26" height="26" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" style={{ color: "rgb(var(--color-brand))" }}>
+                <circle cx="40" cy="10" r="4.5" fill="currentColor"/>
+                <line x1="40" y1="14.5" x2="40" y2="22" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
                 <path d="M14 22 L66 22 L60 36 L20 36 Z" fill="#0F172A"/>
-                <line x1="26" y1="30" x2="54" y2="30" stroke="#3B82F6" strokeWidth="1.5" strokeLinecap="round"/>
+                <line x1="26" y1="30" x2="54" y2="30" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
                 <path d="M30 36 L50 36 L47 62 L33 62 Z" fill="#0F172A"/>
                 <path d="M22 62 L58 62 L60 70 L20 70 Z" fill="#0F172A"/>
               </svg>
-              <span className="font-bold text-[17px]" style={{ letterSpacing: "-0.025em" }}>
-                <span className="text-slate-900">Ag</span><span className="text-brand">Podium</span>
-              </span>
+              <div className="flex flex-col leading-none">
+                <span className="font-bold text-[17px]" style={{ letterSpacing: "-0.025em" }}>
+                  <span className="text-slate-900">Uni</span><span className="text-brand">Podium</span>
+                </span>
+                <span className="text-[10px] text-gray-400 font-normal">{uniInfo.shortName}</span>
+              </div>
             </Link>
 
             {/* Desktop nav */}

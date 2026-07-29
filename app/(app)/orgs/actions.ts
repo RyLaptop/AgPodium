@@ -7,6 +7,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { notify } from "@/lib/notifications";
 import { sendEmail } from "@/lib/email/send";
 import { orgIncomingJoinRequestEmail } from "@/lib/email/templates";
+import { getUniversity } from "@/lib/university";
 
 export type CreateOrgResult =
   | { ok: true; slug: string }
@@ -45,9 +46,10 @@ export async function createOrg(
     return { ok: false, error: error.message };
   }
 
+  const uni = await getUniversity();
   const svc = createServiceClient();
-  // Set status to pending and apply tags
-  await svc.from("orgs").update({ status: "pending", ...(tags.length > 0 ? { tags } : {}) }).eq("slug", slug);
+  // Set status to pending, apply tags, and stamp university
+  await svc.from("orgs").update({ status: "pending", university: uni, ...(tags.length > 0 ? { tags } : {}) }).eq("slug", slug);
 
   // Notify all site admins
   const { data: admins } = await svc.from("users").select("id").eq("is_site_admin", true);

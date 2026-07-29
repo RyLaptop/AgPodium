@@ -1,25 +1,22 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { cookies } from "next/headers";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: "AgPodium",
-  description:
-    "Cross-org campus platform for meeting speakers, event calendars, and bulletin boards.",
-  icons: {
-    icon: "/favicon.svg",
-  },
+  title: "UniPodium",
+  description: "Cross-campus speaker platform for student orgs.",
+  icons: { icon: "/favicon.svg" },
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const jar = await cookies();
+  const uni = jar.get("uni")?.value ?? "default";
+
   return (
-    <html lang="en" className={inter.variable}>
+    <html lang="en" className={inter.variable} data-uni={uni}>
       <body>{children}</body>
     </html>
   );

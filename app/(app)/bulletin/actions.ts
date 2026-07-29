@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { notify } from "@/lib/notifications";
+import { getUniversity } from "@/lib/university";
 
 export type SubmitBulletinResult =
   | { ok: true; id: string }
@@ -40,6 +41,8 @@ export async function submitBulletinPost(
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "Not signed in" };
 
+  const uni = await getUniversity();
+
   if (orgId) {
     const { data: mem } = await supabase
       .from("org_members")
@@ -63,6 +66,7 @@ export async function submitBulletinPost(
       event_at: eventAt.toISOString(),
       event_location: eventLocation || null,
       status: "pending",
+      university: uni,
     })
     .select("id")
     .single();

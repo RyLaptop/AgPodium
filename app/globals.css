@@ -4,9 +4,32 @@
 
 @import "leaflet/dist/leaflet.css";
 
+/* ── Default (landing page / no uni selected) ── */
 :root {
-  --background: #FAFAF8;
-  --foreground: #0F172A;
+  --color-brand:       59 130 246;    /* #3B82F6 blue */
+  --color-brand-light: 96 165 250;    /* #60A5FA */
+  --color-brand-dark:  37  99 235;    /* #2563EB */
+  --color-cream: #FAFAF8;
+  --background:  #FAFAF8;
+  --foreground:  #0F172A;
+}
+
+/* ── Texas A&M: maroon + cream ── */
+[data-uni="tamu"] {
+  --color-brand:       80   0   0;    /* #500000 maroon */
+  --color-brand-light: 120  20  20;   /* #781414 */
+  --color-brand-dark:  55   0   0;    /* #370000 */
+  --color-cream: #FAF9F6;
+  --background:  #FAF9F6;
+}
+
+/* ── LSU: purple + gold tint ── */
+[data-uni="lsu"] {
+  --color-brand:       70  29 124;    /* #461D7C purple */
+  --color-brand-light: 107  63 160;   /* #6B3FA0 */
+  --color-brand-dark:  48  18  88;    /* #301258 */
+  --color-cream: #FEFDF0;             /* warm gold tint */
+  --background:  #FEFDF0;
 }
 
 html,

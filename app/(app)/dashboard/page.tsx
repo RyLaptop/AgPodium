@@ -2,8 +2,11 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { BulletinCarousel } from "./_bulletin-carousel";
+import { getUniversity, UNIVERSITIES } from "@/lib/university";
 
 export default async function DashboardPage() {
+  const uni = await getUniversity();
+  const uniInfo = UNIVERSITIES[uni];
   const supabase = await createClient();
   const {
     data: { user },
@@ -22,6 +25,7 @@ export default async function DashboardPage() {
       .from("bulletin_posts")
       .select("id, event_title, event_description, event_at, event_location, orgs(name)")
       .eq("status", "approved")
+      .eq("university", uni)
       .gte("event_at", new Date().toISOString())
       .order("event_at", { ascending: true })
       .limit(10),
@@ -41,7 +45,7 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-8">
       <section>
-        <h1 className="text-3xl font-bold">{user ? "Welcome back." : "Welcome to AgPodium."}</h1>
+        <h1 className="text-3xl font-bold">{user ? "Welcome back." : `Welcome to UniPodium · ${uniInfo.shortName}.`}</h1>
         <p className="text-gray-600 mt-1">
           {user ? `Signed in as ${user.email}.` : "Browse orgs, find meetings, and request speaking slots."}
         </p>
@@ -153,7 +157,7 @@ export default async function DashboardPage() {
         </Link>
       </section>
       <p className="text-xs text-gray-400 text-center pt-4 border-t border-gray-100">
-        AgPodium is a student-run platform and is not affiliated with, endorsed by, or associated with Texas A&amp;M University in any way.
+        UniPodium is a student-run platform and is not affiliated with, endorsed by, or associated with {uniInfo.name} in any way.
       </p>
     </div>
   );

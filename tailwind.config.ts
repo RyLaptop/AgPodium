@@ -8,12 +8,13 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // CSS-variable-driven so each university can override them
         brand: {
-          DEFAULT: "#3B82F6",
-          light: "#60A5FA",
-          dark: "#2563EB",
+          DEFAULT: "rgb(var(--color-brand) / <alpha-value>)",
+          light:   "rgb(var(--color-brand-light) / <alpha-value>)",
+          dark:    "rgb(var(--color-brand-dark) / <alpha-value>)",
         },
-        cream: "#FAFAF8",
+        cream:   "var(--color-cream)",
         agslate: "#0F172A",
         yellow: {
           accent: "#EAB308",

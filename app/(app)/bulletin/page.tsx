@@ -4,6 +4,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { ClearBulletinPost } from "./_clear-post";
 import { PostActions } from "./_post-actions";
 import { AuthGatedLink } from "@/app/(app)/_auth-gate";
+import { getUniversity } from "@/lib/university";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +25,7 @@ export default async function BulletinPage({
   searchParams: Promise<{ submitted?: string }>;
 }) {
   const { submitted } = await searchParams;
+  const uni = await getUniversity();
   const supabase = await createClient();
   const svc = createServiceClient();
 
@@ -37,6 +39,7 @@ export default async function BulletinPage({
         .from("bulletin_posts")
         .select("id, submitter_id, org_id, event_title, event_description, event_at, event_location, orgs(name, slug)")
         .eq("status", "approved")
+        .eq("university", uni)
         .gte("event_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
         .order("event_at", { ascending: true }),
       user
