@@ -168,8 +168,8 @@ export default async function OrgProfilePage({
           </div>
         )}
 
-        <div className="mt-4 flex items-start justify-between gap-4">
-          <div className="flex items-start gap-4">
+        <div className="mt-4 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div className="flex items-start gap-4 min-w-0">
             {org.logo_url && (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -178,7 +178,7 @@ export default async function OrgProfilePage({
                 className="w-16 h-16 rounded-full object-cover border border-gray-200 shrink-0"
               />
             )}
-            <div>
+            <div className="min-w-0">
               <h1 className="text-3xl font-bold">{org.name}</h1>
               {org.description && (
                 <p className="text-gray-700 mt-2 max-w-2xl">{org.description}</p>
@@ -228,7 +228,7 @@ export default async function OrgProfilePage({
             </div>
           </div>
 
-          <div className="flex flex-col gap-2 shrink-0">
+          <div className="flex flex-row sm:flex-col gap-2 shrink-0">
             <JoinLeaveButton orgId={org.id} isMember={isMember} isPending={isPending} isDirector={isDirector} />
             {canManage && (
               <AuthGatedLink
