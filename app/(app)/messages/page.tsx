@@ -13,7 +13,7 @@ export default async function MessagesPage() {
       <p className="text-sm">To access this feature you must be signed in.</p>
       <div className="flex gap-3 mt-2">
         <Link href="/login" className="px-4 py-2 bg-brand text-white rounded-lg text-sm hover:bg-brand-dark transition">Sign in</Link>
-        <Link href="/signup" className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition">Create account</Link>
+        <Link href="/login?mode=signup" className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition">Create account</Link>
       </div>
     </div>
   );

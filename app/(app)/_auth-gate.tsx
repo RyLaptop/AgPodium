@@ -37,7 +37,7 @@ function AuthModal({ onClose }: { onClose: () => void }) {
             Sign in
           </Link>
           <Link
-            href="/signup"
+            href="/login?mode=signup"
             className="px-4 py-3 border border-gray-300 rounded-lg text-sm text-center text-gray-700 hover:bg-gray-50 transition"
           >
             Create account

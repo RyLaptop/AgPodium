@@ -79,7 +79,7 @@ export default async function DashboardPage() {
             <div className="flex gap-3 justify-center text-sm">
               <Link href="/login" className="text-brand hover:underline">Sign in</Link>
               <span className="text-gray-400">·</span>
-              <Link href="/signup" className="text-brand hover:underline">Create account</Link>
+              <Link href="/login?mode=signup" className="text-brand hover:underline">Create account</Link>
             </div>
           </div>
         ) : orgCount === 0 ? (
