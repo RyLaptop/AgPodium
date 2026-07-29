@@ -566,6 +566,23 @@ export async function deleteOrg(orgId: string) {
   }
 
   const svc = createServiceClient();
+
+  // Get all meetings so we can delete their children first
+  const { data: meetings } = await svc.from("meetings").select("id").eq("org_id", orgId);
+  const meetingIds = (meetings ?? []).map((m) => m.id as string);
+
+  // Delete in FK dependency order
+  if (meetingIds.length > 0) {
+    await svc.from("chat_messages").delete().in("meeting_id", meetingIds);
+    await svc.from("speak_requests").delete().in("meeting_id", meetingIds);
+  }
+  await svc.from("speak_requests").delete().eq("requester_org_id", orgId);
+  await svc.from("chat_messages").delete().eq("org_id", orgId);
+  await svc.from("meetings").delete().eq("org_id", orgId);
+  await svc.from("org_invites").delete().eq("org_id", orgId);
+  await svc.from("org_members").delete().eq("org_id", orgId);
+  await svc.from("bulletin_posts").delete().eq("org_id", orgId);
+
   const { error } = await svc.from("orgs").delete().eq("id", orgId);
   if (error) return { ok: false as const, error: error.message };
 
