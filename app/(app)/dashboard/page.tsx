@@ -59,7 +59,7 @@ export default async function DashboardPage() {
         </section>
       )}
 
-      <AdBanner />
+      <AdBanner variant="apartment" />
 
       <section>
         <div className="flex items-center justify-between mb-4">

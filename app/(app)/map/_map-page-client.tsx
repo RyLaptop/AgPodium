@@ -144,7 +144,7 @@ export function MapPageClient() {
           <div className="isolate w-full rounded-xl overflow-hidden border border-gray-200" style={{ height: 420 }}>
             <MapWrapper meetings={meetings} />
           </div>
-          <AdBanner />
+          <AdBanner variant="apartment" />
           <div className="grid sm:grid-cols-2 gap-3">
             {meetings.map((m) => (
               <Link

@@ -1,0 +1,33 @@
+<svg width="1120" height="104" viewBox="0 0 1120 104" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800&amp;family=Fraunces:wght@800&amp;display=swap');
+    </style>
+  </defs>
+
+  <!-- background -->
+  <rect width="1120" height="104" fill="#0F2540"/>
+
+  <!-- subtle glow top-right -->
+  <circle cx="1120" cy="0" r="140" fill="#1A3560" opacity="0.5"/>
+
+  <!-- LEFT: badge -->
+  <circle cx="62" cy="52" r="28" fill="#FAF6EB"/>
+  <!-- 4-point sparkle -->
+  <path d="M62 34 L65.5 48.5 L80 52 L65.5 55.5 L62 70 L58.5 55.5 L44 52 L58.5 48.5 Z" fill="#E8B547"/>
+
+  <!-- wordmark -->
+  <text x="106" y="47" font-family="Inter, sans-serif" font-weight="800" font-size="14" letter-spacing="1.7" fill="#FAF6EB">STILLBRIGHT FOUNDATION</text>
+  <text x="106" y="66" font-family="Inter, sans-serif" font-weight="600" font-size="10.5" letter-spacing="0.85" fill="#A8B4C7">NEURODEGENERATIVE DISEASE RESEARCH</text>
+
+  <!-- divider -->
+  <line x1="380" y1="24" x2="380" y2="80" stroke="#FAF6EB" stroke-opacity="0.2" stroke-width="1"/>
+
+  <!-- headline + subline -->
+  <text x="412" y="50" font-family="Fraunces, Georgia, serif" font-weight="800" font-size="32" fill="#FAF6EB">Keep minds bright.</text>
+  <text x="413" y="74" font-family="Inter, sans-serif" font-weight="500" font-size="13" fill="#A8B4C7">Every dollar funds research into Alzheimer's, Parkinson's, and ALS.</text>
+
+  <!-- CTA pill -->
+  <rect x="928" y="32" width="152" height="40" rx="20" fill="#E8B547"/>
+  <text x="1004" y="57" font-family="Inter, sans-serif" font-weight="700" font-size="14" fill="#0F2540" text-anchor="middle">Donate  →</text>
+</svg>

@@ -1,0 +1,23 @@
+<svg width="320" height="100" viewBox="0 0 320 100" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800&amp;family=Fraunces:wght@800&amp;display=swap');
+    </style>
+  </defs>
+
+  <!-- background -->
+  <rect width="320" height="100" fill="#EDE5D3"/>
+
+  <!-- badge -->
+  <rect x="14" y="28" width="44" height="44" rx="9" fill="#1F1B18"/>
+  <rect x="22" y="36" width="28" height="28" rx="2" fill="none" stroke="#EDE5D3" stroke-width="2"/>
+  <line x1="36" y1="36" x2="36" y2="64" stroke="#EDE5D3" stroke-width="2"/>
+  <line x1="22" y1="50" x2="50" y2="50" stroke="#EDE5D3" stroke-width="2"/>
+
+  <!-- brand micro-line -->
+  <text x="70" y="34" font-family="Inter, sans-serif" font-weight="800" font-size="9" letter-spacing="1.4" fill="#B87A4E">THE APARTMENT · CSTAT</text>
+
+  <!-- headline -->
+  <text x="70" y="62" font-family="Fraunces, Georgia, serif" font-weight="800" font-size="20" fill="#1F1B18">Live close. Live well.</text>
+
+</svg>

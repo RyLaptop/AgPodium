@@ -1,0 +1,36 @@
+<svg width="1120" height="120" viewBox="0 0 1120 120" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800&amp;family=Fraunces:wght@800&amp;display=swap');
+    </style>
+  </defs>
+
+  <!-- background -->
+  <rect width="1120" height="120" fill="#EDE5D3"/>
+
+  <!-- subtle warm accent top-right -->
+  <circle cx="1120" cy="0" r="140" fill="#E0D5BE" opacity="0.6"/>
+
+  <!-- LEFT: badge (dark rounded square with window icon) -->
+  <rect x="30" y="30" width="60" height="60" rx="12" fill="#1F1B18"/>
+  <!-- window frame -->
+  <rect x="42" y="42" width="36" height="36" rx="3" fill="none" stroke="#EDE5D3" stroke-width="2.5"/>
+  <!-- window cross -->
+  <line x1="60" y1="42" x2="60" y2="78" stroke="#EDE5D3" stroke-width="2.5"/>
+  <line x1="42" y1="60" x2="78" y2="60" stroke="#EDE5D3" stroke-width="2.5"/>
+
+  <!-- wordmark -->
+  <text x="108" y="54" font-family="Inter, sans-serif" font-weight="800" font-size="14" letter-spacing="2" fill="#1F1B18">THE APARTMENT</text>
+  <text x="108" y="74" font-family="Inter, sans-serif" font-weight="600" font-size="10.5" letter-spacing="0.85" fill="#B87A4E">COLLEGE STATION · NOW LEASING</text>
+
+  <!-- divider -->
+  <line x1="360" y1="30" x2="360" y2="90" stroke="#1F1B18" stroke-opacity="0.15" stroke-width="1"/>
+
+  <!-- headline + subline -->
+  <text x="392" y="58" font-family="Fraunces, Georgia, serif" font-weight="800" font-size="34" fill="#1F1B18">Live close. Live well.</text>
+  <text x="393" y="83" font-family="Inter, sans-serif" font-weight="500" font-size="13" fill="#7A6F5F">Modern apartments minutes from campus. Now touring for the upcoming semester.</text>
+
+  <!-- CTA pill -->
+  <rect x="928" y="40" width="152" height="40" rx="20" fill="#1F1B18"/>
+  <text x="1004" y="65" font-family="Inter, sans-serif" font-weight="700" font-size="14" fill="#EDE5D3" text-anchor="middle">Tour  →</text>
+</svg>
