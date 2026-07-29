@@ -19,7 +19,4 @@
   <!-- headline -->
   <text x="66" y="62" font-family="Fraunces, Georgia, serif" font-weight="800" font-size="20" fill="#FFF6EA">Eat out. Give back.</text>
 
-  <!-- CTA pill -->
-  <rect x="234" y="32" width="72" height="36" rx="18" fill="#FFF6EA"/>
-  <text x="270" y="55" font-family="Inter, sans-serif" font-weight="700" font-size="12" fill="#A62523" text-anchor="middle">Join  →</text>
 </svg>
