@@ -149,8 +149,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           {children}
         </main>
 
-        <div className="w-full">
-          <img src="/ffac-ad-1120x104.svg" alt="Advertisement" width={1120} height={104} className="w-full h-auto" />
+        <div className="w-full" style={{ height: "83px", overflow: "hidden" }}>
+          <img src="/ffac-ad-1120x104.svg" alt="Advertisement" width={1120} height={104} className="w-full h-full object-cover" />
         </div>
       </div>
     </AuthGateProvider>
