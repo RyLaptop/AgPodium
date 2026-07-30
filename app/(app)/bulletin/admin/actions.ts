@@ -45,16 +45,40 @@ export async function adminUpdateUser(
 async function deleteAuthAndProfile(targetUserId: string): Promise<Result> {
   const svc = createServiceClient();
 
-  // Attempt auth deletion — cascades to public.users on success
-  const { error: authErr } = await svc.auth.admin.deleteUser(targetUserId);
+  // Null out nullable back-references first
+  await Promise.all([
+    svc.from("speak_requests").update({ decided_by: null }).eq("decided_by", targetUserId),
+    svc.from("bulletin_posts").update({ reviewed_by: null }).eq("reviewed_by", targetUserId),
+  ]);
 
+  // Delete records with non-cascading FK references to this user
+  const meetingRows = await svc.from("meetings").select("id").eq("created_by", targetUserId);
+  const meetingIds = (meetingRows.data ?? []).map((m) => m.id);
+  if (meetingIds.length > 0) {
+    await svc.from("speak_requests").delete().in("meeting_id", meetingIds);
+    await svc.from("meetings").delete().in("id", meetingIds);
+  }
+  await Promise.all([
+    svc.from("speak_requests").delete().eq("requester_user_id", targetUserId),
+    svc.from("chat_messages").delete().eq("user_id", targetUserId),
+    svc.from("org_members").delete().eq("user_id", targetUserId),
+    svc.from("org_invites").delete().eq("created_by", targetUserId),
+    svc.from("bulletin_posts").delete().eq("submitter_id", targetUserId),
+    svc.from("notifications").delete().eq("user_id", targetUserId),
+  ]);
+
+  // Check for orgs the user created — can't delete user while they're the created_by
+  const { data: ownedOrgs } = await svc.from("orgs").select("id").eq("created_by", targetUserId);
+  if (ownedOrgs && ownedOrgs.length > 0) {
+    return { ok: false, error: "This user owns org(s). Delete those orgs first or transfer ownership." };
+  }
+
+  // Attempt auth deletion (cascades to public.users)
+  const { error: authErr } = await svc.auth.admin.deleteUser(targetUserId);
   if (authErr) {
-    // Auth deletion failed (e.g. user not found in auth, or project-level restriction).
-    // Delete the profile row directly so the account can't be used regardless.
+    // Fallback: delete the profile row directly
     const { error: profileErr } = await svc.from("users").delete().eq("id", targetUserId);
-    if (profileErr) {
-      return { ok: false, error: profileErr.message || "Failed to delete user." };
-    }
+    if (profileErr) return { ok: false, error: profileErr.message || "Failed to delete user." };
   }
 
   return { ok: true };

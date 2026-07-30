@@ -1,0 +1,33 @@
+<svg width="1120" height="120" viewBox="0 0 1120 120" xmlns="http://www.w3.org/2000/svg">
+  <!-- background -->
+  <rect width="1120" height="120" fill="#F2E9D5"/>
+
+  <!-- subtle warm accent top-right -->
+  <circle cx="1120" cy="0" r="140" fill="#E8DDC2" opacity="0.7"/>
+
+  <!-- LEFT: badge (pine circle w/ rising sun) -->
+  <circle cx="62" cy="60" r="30" fill="#1F3A2E"/>
+  <!-- half-sun body -->
+  <path d="M50 66 A 12 12 0 0 1 74 66 Z" fill="#D6763E"/>
+  <!-- rays -->
+  <line x1="62" y1="40" x2="62" y2="44" stroke="#D6763E" stroke-width="2" stroke-linecap="round"/>
+  <line x1="48" y1="48" x2="51" y2="51" stroke="#D6763E" stroke-width="2" stroke-linecap="round"/>
+  <line x1="76" y1="48" x2="73" y2="51" stroke="#D6763E" stroke-width="2" stroke-linecap="round"/>
+  <!-- horizon line accent -->
+  <line x1="46" y1="66" x2="78" y2="66" stroke="#F2E9D5" stroke-width="1.5" stroke-linecap="round"/>
+
+  <!-- wordmark -->
+  <text x="108" y="54" font-family="sans-serif" font-weight="800" font-size="14" letter-spacing="2" fill="#1F3A2E">COLLEGE STATION</text>
+  <text x="108" y="74" font-family="sans-serif" font-weight="600" font-size="10.5" letter-spacing="0.85" fill="#D6763E">TEXAS · BRAZOS VALLEY</text>
+
+  <!-- divider -->
+  <line x1="360" y1="30" x2="360" y2="90" stroke="#1F3A2E" stroke-opacity="0.18" stroke-width="1"/>
+
+  <!-- headline + subline -->
+  <text x="392" y="58" font-family="Georgia, serif" font-weight="800" font-size="34" fill="#1F3A2E">Small town. Big Texas.</text>
+  <text x="393" y="83" font-family="sans-serif" font-weight="500" font-size="13" fill="#7A6F5A">Texas hospitality, hometown pride, and room to grow.</text>
+
+  <!-- CTA pill -->
+  <rect x="928" y="40" width="152" height="40" rx="20" fill="#1F3A2E"/>
+  <text x="1004" y="65" font-family="sans-serif" font-weight="700" font-size="14" fill="#F2E9D5" text-anchor="middle">Visit &#x2192;</text>
+</svg>

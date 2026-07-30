@@ -156,6 +156,16 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           {children}
         </main>
 
+        <footer className="border-t border-gray-100 bg-white">
+          <div className="max-w-6xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-400">
+            <span>© 2026 UniPodium. All rights reserved.</span>
+            <div className="flex gap-4">
+              <Link href="/contact" className="hover:text-brand transition">Contact</Link>
+              <Link href="/help" className="hover:text-brand transition">Help &amp; Resources</Link>
+            </div>
+          </div>
+        </footer>
+
         <AdBanner variant="footer" />
       </div>
     </AuthGateProvider>

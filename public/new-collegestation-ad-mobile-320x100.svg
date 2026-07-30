@@ -1,0 +1,21 @@
+<svg width="320" height="100" viewBox="0 0 320 100" xmlns="http://www.w3.org/2000/svg">
+  <!-- background -->
+  <rect width="320" height="100" fill="#F2E9D5"/>
+
+  <!-- badge -->
+  <circle cx="34" cy="50" r="22" fill="#1F3A2E"/>
+  <!-- half-sun body -->
+  <path d="M25 55 A 9 9 0 0 1 43 55 Z" fill="#D6763E"/>
+  <!-- rays -->
+  <line x1="34" y1="35" x2="34" y2="38" stroke="#D6763E" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="24" y1="41" x2="26" y2="43" stroke="#D6763E" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="44" y1="41" x2="42" y2="43" stroke="#D6763E" stroke-width="1.8" stroke-linecap="round"/>
+  <!-- horizon line -->
+  <line x1="22" y1="55" x2="46" y2="55" stroke="#F2E9D5" stroke-width="1.2" stroke-linecap="round"/>
+
+  <!-- brand micro-line -->
+  <text x="66" y="34" font-family="sans-serif" font-weight="800" font-size="9" letter-spacing="1.4" fill="#D6763E">COLLEGE STATION · TEXAS</text>
+
+  <!-- headline -->
+  <text x="66" y="62" font-family="Georgia, serif" font-weight="800" font-size="19" fill="#1F3A2E">Small town. Big Texas.</text>
+</svg>
