@@ -20,8 +20,14 @@ export default async function ProfilePage({
   const { userId } = await params;
   const jar = await cookies();
   const currentUni = (jar.get("uni")?.value ?? "tamu") as University;
-  const lockedUntilStr = jar.get("uni_locked_until")?.value;
-  const lockedUntil = lockedUntilStr ? new Date(lockedUntilStr) : null;
+  const windowStartStr = jar.get("uni_switch_window_start")?.value;
+  const countStr = jar.get("uni_switch_count")?.value;
+  const windowStart = windowStartStr ? new Date(windowStartStr) : null;
+  const WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
+  const inWindow = windowStart ? Date.now() - windowStart.getTime() < WINDOW_MS : false;
+  const switchesUsed = inWindow ? parseInt(countStr ?? "0", 10) : 0;
+  const switchesRemaining = Math.max(0, 2 - switchesUsed);
+  const windowReset = inWindow && windowStart ? new Date(windowStart.getTime() + WINDOW_MS) : null;
 
   const supabase = await createClient();
   const svc = createServiceClient();
@@ -31,7 +37,7 @@ export default async function ProfilePage({
     await Promise.all([
       svc
         .from("users")
-        .select("id, full_name, email, bio, major, avatar_url, created_at")
+        .select("id, full_name, email, bio, major, avatar_url, created_at, is_site_admin")
         .eq("id", userId)
         .single(),
       svc
@@ -158,7 +164,12 @@ export default async function ProfilePage({
       )}
 
       {isSelf && (
-        <ChangeUniversitySection currentUni={currentUni} lockedUntil={lockedUntil} />
+        <ChangeUniversitySection
+          currentUni={currentUni}
+          isAdmin={(profile as unknown as { is_site_admin?: boolean })?.is_site_admin ?? false}
+          switchesRemaining={switchesRemaining}
+          windowReset={windowReset}
+        />
       )}
 
       <div className="flex items-center justify-between">

@@ -8,6 +8,15 @@ import { notify } from "@/lib/notifications";
 import { sendEmail } from "@/lib/email/send";
 import { orgIncomingJoinRequestEmail } from "@/lib/email/templates";
 import { getUniversity } from "@/lib/university";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+async function isDirectorOrAdmin(supabase: SupabaseClient, orgId: string, userId: string): Promise<boolean> {
+  const [{ data: mem }, { data: profile }] = await Promise.all([
+    supabase.from("org_members").select("role").eq("org_id", orgId).eq("user_id", userId).eq("status", "active").maybeSingle(),
+    supabase.from("users").select("is_site_admin").eq("id", userId).single(),
+  ]);
+  return mem?.role === "director" || (profile?.is_site_admin ?? false);
+}
 
 export type CreateOrgResult =
   | { ok: true; slug: string }
@@ -189,14 +198,7 @@ export async function promoteMember(orgId: string, userId: string) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false as const, error: "Not signed in" };
 
-  const { data: myMem } = await supabase
-    .from("org_members")
-    .select("role")
-    .eq("org_id", orgId)
-    .eq("user_id", user.id)
-    .eq("status", "active")
-    .maybeSingle();
-  if (!myMem || myMem.role !== "director") {
+  if (!await isDirectorOrAdmin(supabase, orgId, user.id)) {
     return { ok: false as const, error: "Only STAFF can promote members." };
   }
 
@@ -228,14 +230,7 @@ export async function updateOrg(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false as const, error: "Not signed in" };
 
-  const { data: myMem } = await supabase
-    .from("org_members")
-    .select("role")
-    .eq("org_id", orgId)
-    .eq("user_id", user.id)
-    .eq("status", "active")
-    .maybeSingle();
-  if (!myMem || myMem.role !== "director") {
+  if (!await isDirectorOrAdmin(supabase, orgId, user.id)) {
     return { ok: false as const, error: "Only STAFF can edit the org." };
   }
 
@@ -267,10 +262,7 @@ export async function removeMember(orgId: string, targetUserId: string) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false as const, error: "Not signed in" };
 
-  const { data: myMem } = await supabase
-    .from("org_members").select("role")
-    .eq("org_id", orgId).eq("user_id", user.id).eq("status", "active").maybeSingle();
-  if (!myMem || myMem.role !== "director") {
+  if (!await isDirectorOrAdmin(supabase, orgId, user.id)) {
     return { ok: false as const, error: "Only STAFF can remove members." };
   }
 
@@ -302,9 +294,7 @@ export async function generateInvite(orgId: string, orgSlug: string) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false as const, error: "Not signed in" };
 
-  const { data: myMem } = await supabase.from("org_members").select("role")
-    .eq("org_id", orgId).eq("user_id", user.id).eq("status", "active").maybeSingle();
-  if (!myMem || myMem.role !== "director") return { ok: false as const, error: "Only STAFF can generate invite links." };
+  if (!await isDirectorOrAdmin(supabase, orgId, user.id)) return { ok: false as const, error: "Only STAFF can generate invite links." };
 
   const code = crypto.randomUUID().replace(/-/g, "").slice(0, 12);
   const svc = createServiceClient();
@@ -331,9 +321,7 @@ export async function deleteInvite(inviteId: string, orgSlug: string) {
   const { data: invite } = await svc.from("org_invites").select("org_id").eq("id", inviteId).single();
   if (!invite) return { ok: false as const, error: "Not found." };
 
-  const { data: myMem } = await supabase.from("org_members").select("role")
-    .eq("org_id", invite.org_id).eq("user_id", user.id).eq("status", "active").maybeSingle();
-  if (!myMem || myMem.role !== "director") return { ok: false as const, error: "Not authorized." };
+  if (!await isDirectorOrAdmin(supabase, invite.org_id, user.id)) return { ok: false as const, error: "Not authorized." };
 
   await svc.from("org_invites").delete().eq("id", inviteId);
 
@@ -346,9 +334,7 @@ export async function setMemberTitle(orgId: string, targetUserId: string, title:
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false as const, error: "Not signed in" };
 
-  const { data: myMem } = await supabase.from("org_members").select("role")
-    .eq("org_id", orgId).eq("user_id", user.id).eq("status", "active").maybeSingle();
-  if (!myMem || myMem.role !== "director") return { ok: false as const, error: "Only STAFF can set titles." };
+  if (!await isDirectorOrAdmin(supabase, orgId, user.id)) return { ok: false as const, error: "Only STAFF can set titles." };
 
   const svc = createServiceClient();
   const { error } = await svc.from("org_members")
@@ -365,9 +351,7 @@ export async function uploadOrgLogo(orgId: string, orgSlug: string, formData: Fo
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false as const, error: "Not signed in" };
 
-  const { data: myMem } = await supabase.from("org_members").select("role")
-    .eq("org_id", orgId).eq("user_id", user.id).eq("status", "active").maybeSingle();
-  if (!myMem || myMem.role !== "director") return { ok: false as const, error: "Only STAFF can upload logos." };
+  if (!await isDirectorOrAdmin(supabase, orgId, user.id)) return { ok: false as const, error: "Only STAFF can upload logos." };
 
   const file = formData.get("logo") as File | null;
   if (!file || file.size === 0) return { ok: false as const, error: "No file provided." };
@@ -398,9 +382,7 @@ export async function addAffiliation(orgId: string, orgSlug: string, affiliateOr
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false as const, error: "Not signed in" };
 
-  const { data: myMem } = await supabase.from("org_members").select("role")
-    .eq("org_id", orgId).eq("user_id", user.id).eq("status", "active").maybeSingle();
-  if (!myMem || myMem.role !== "director") return { ok: false as const, error: "Only STAFF can manage affiliations." };
+  if (!await isDirectorOrAdmin(supabase, orgId, user.id)) return { ok: false as const, error: "Only STAFF can manage affiliations." };
 
   const svc = createServiceClient();
 

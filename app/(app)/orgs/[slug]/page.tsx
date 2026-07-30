@@ -87,14 +87,15 @@ export default async function OrgProfilePage({
     .map((m) => m.users as unknown as { id: string; full_name: string | null; email: string });
 
   const memberCount = activeMembers.length;
+  const isAdmin = profile?.is_site_admin ?? false;
   const myRole = myMembership?.role as "member" | "officer" | "director" | undefined;
   const myStatus = myMembership?.status as "active" | "pending" | undefined;
   const isPending = myStatus === "pending";
   const isMember = !!myRole && myStatus === "active";
-  const isDirector = isMember && myRole === "director";
-  const canManage = isMember && (myRole === "director" || myRole === "officer");
+  const isDirector = (isMember && myRole === "director") || isAdmin;
+  const canManage = (isMember && (myRole === "director" || myRole === "officer")) || isAdmin;
 
-  const pendingForDirector = canManage && myRole === "director"
+  const pendingForDirector = isDirector
     ? pendingMembers.map((m) => {
         const u = m.users as unknown as { id: string; full_name: string | null; email: string };
         return { user_id: u.id, full_name: u.full_name, email: u.email };

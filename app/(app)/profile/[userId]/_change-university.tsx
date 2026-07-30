@@ -4,17 +4,15 @@ import { changeUniversity } from "./actions";
 
 type Props = {
   currentUni: University;
-  lockedUntil: Date | null;
+  isAdmin: boolean;
+  switchesRemaining: number;
+  windowReset: Date | null;
 };
 
-export function ChangeUniversitySection({ currentUni, lockedUntil }: Props) {
-  const now = new Date();
-  const isLocked = lockedUntil !== null && lockedUntil > now;
-  const daysRemaining = isLocked && lockedUntil
-    ? Math.ceil((lockedUntil.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-    : 0;
-  const unlockDateStr = lockedUntil
-    ? lockedUntil.toLocaleDateString([], { month: "long", day: "numeric" })
+export function ChangeUniversitySection({ currentUni, isAdmin, switchesRemaining, windowReset }: Props) {
+  const isLocked = !isAdmin && switchesRemaining === 0;
+  const resetDateStr = windowReset
+    ? windowReset.toLocaleDateString([], { month: "long", day: "numeric" })
     : null;
 
   return (
@@ -31,11 +29,10 @@ export function ChangeUniversitySection({ currentUni, lockedUntil }: Props) {
 
       {isLocked ? (
         <p className="text-xs text-gray-400">
-          You can switch universities again in{" "}
-          <span className="font-medium text-gray-600">
-            {daysRemaining} day{daysRemaining !== 1 ? "s" : ""}
-          </span>
-          {unlockDateStr ? ` (${unlockDateStr})` : ""}.
+          You&apos;ve used both switches for this 30-day window.
+          {resetDateStr && (
+            <> You can switch again on <span className="font-medium text-gray-600">{resetDateStr}</span>.</>
+          )}
         </p>
       ) : (
         <form action={changeUniversity} className="flex items-center gap-3 flex-wrap">
@@ -53,9 +50,15 @@ export function ChangeUniversitySection({ currentUni, lockedUntil }: Props) {
           >
             Switch
           </button>
-          <p className="text-xs text-gray-400 w-full">
-            After switching, you won&apos;t be able to change again for 30 days.
-          </p>
+          {isAdmin ? (
+            <p className="text-xs text-gray-400 w-full">Admins can switch campuses freely.</p>
+          ) : (
+            <p className="text-xs text-gray-400 w-full">
+              {switchesRemaining === 2
+                ? "You can switch up to 2 times per 30 days."
+                : `${switchesRemaining} switch remaining this 30-day window${resetDateStr ? ` (resets ${resetDateStr})` : ""}.`}
+            </p>
+          )}
         </form>
       )}
     </section>
