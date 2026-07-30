@@ -1,6 +1,6 @@
 const AD_LINKS = {
   ffac: "https://foodiesforacause.org",
-  apartment: "https://aspirereserve.com/",
+  apartment: "https://cstx.gov",
   footer: "https://www.alz.org/?form=FUNDHYMMBXU",
   calendar: "https://foodiesforacause.org",
 };
@@ -24,8 +24,8 @@ export function AdBanner({ variant = "ffac" }: AdBannerProps) {
   if (variant === "apartment") {
     return (
       <a href={href} target="_blank" rel="noopener noreferrer" className="block w-full overflow-hidden h-[75px] md:h-[120px]">
-        <img src="/theapartment-ad-mobile-320x100.svg" alt="Advertisement" className="w-full h-full object-cover md:hidden" />
-        <img src="/theapartment-ad-1120x120.svg" alt="Advertisement" className="hidden md:block w-full h-full object-cover" />
+        <img src="/collegestation-ad-mobile-320x100.svg" alt="Advertisement" className="w-full h-full object-cover md:hidden" />
+        <img src="/collegestation-ad-1120x120.svg" alt="Advertisement" className="hidden md:block w-full h-full object-cover" />
       </a>
     );
   }
