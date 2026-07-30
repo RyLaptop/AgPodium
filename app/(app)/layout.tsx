@@ -61,10 +61,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const navLinks = [
     { href: "/dashboard", label: "Dashboard" },
     { href: "/orgs", label: "Orgs" },
+    { href: "/bulletin", label: "Bulletin", excludePrefixes: ["/bulletin/admin"] },
     { href: "/requests", label: "Requests", requiresAuth: true },
     { href: "/messages", label: "Messages", requiresAuth: true },
     { href: "/map", label: "Map" },
-    { href: "/bulletin", label: "Bulletin", excludePrefixes: ["/bulletin/admin"] },
     { href: "/calendar", label: "Calendar" },
   ];
 
