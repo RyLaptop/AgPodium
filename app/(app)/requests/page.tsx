@@ -25,11 +25,13 @@ export default async function RequestsPage() {
 
   const svc = createServiceClient();
 
-  const [{ data: allOrgs }, { data: myOrgMemberships }] = await Promise.all([
+  const [{ data: allOrgs }, { data: myOrgMemberships }, { data: currentUserProfile }] = await Promise.all([
     svc.from("orgs").select("id, name, slug").eq("status", "approved").order("name"),
     supabase.from("org_members").select("org_id, orgs(id, name)")
       .eq("user_id", user.id).eq("status", "active").in("role", ["officer", "director"]),
+    supabase.from("users").select("is_site_admin").eq("id", user.id).single(),
   ]);
+  const isAdmin = currentUserProfile?.is_site_admin ?? false;
 
   const myOrgs = (myOrgMemberships ?? []).map((m) => {
     const o = m.orgs as unknown as { id: string; name: string } | null;
@@ -63,7 +65,7 @@ export default async function RequestsPage() {
       .in("status", ["pending", "waitlisted", "approved", "denied", "disputed", "completed"])
       .order("created_at", { ascending: false }),
 
-    supabase
+    (isAdmin ? svc : supabase)
       .from("speak_requests")
       .select("id, pitch, status, requested_minutes, created_at, users!speak_requests_requester_user_id_fkey(full_name, email), orgs!speak_requests_requester_org_id_fkey(name), meetings(id, title, starts_at, org_id, orgs(name, slug))")
       .neq("requester_user_id", user.id)
@@ -78,14 +80,20 @@ export default async function RequestsPage() {
       .eq("status", "pending")
       .order("created_at", { ascending: false }),
 
-    myOrgIds.length > 0
+    isAdmin
       ? svc
           .from("org_members")
           .select("user_id, org_id, created_at")
-          .in("org_id", myOrgIds)
           .eq("status", "pending")
           .order("created_at", { ascending: false })
-      : Promise.resolve({ data: [] as { user_id: string; org_id: string; created_at: string }[] }),
+      : myOrgIds.length > 0
+        ? svc
+            .from("org_members")
+            .select("user_id, org_id, created_at")
+            .in("org_id", myOrgIds)
+            .eq("status", "pending")
+            .order("created_at", { ascending: false })
+        : Promise.resolve({ data: [] as { user_id: string; org_id: string; created_at: string }[] }),
 
     svc
       .from("dm_threads")
@@ -264,7 +272,7 @@ export default async function RequestsPage() {
           )}
         </section>
 
-        {myOrgIds.length > 0 && (
+        {(isAdmin || myOrgIds.length > 0) && (
           <section>
             <h3 className="text-xl font-semibold mb-3">Incoming join requests</h3>
             {!incomingJoinReqs || incomingJoinReqs.length === 0 ? (
