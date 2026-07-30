@@ -24,6 +24,7 @@ export async function submitBulletinPost(
   const instagramUrl = String(formData.get("instagram_url") ?? "").trim() || null;
   const thumbnailFile = formData.get("thumbnail") as File | null;
   const bannerFile = formData.get("banner") as File | null;
+  const isUniversityPost = orgId === "__university__";
 
   if (eventTitle.length < 3) {
     return { ok: false, error: "Title is too short (min 3 chars)." };
@@ -47,33 +48,41 @@ export async function submitBulletinPost(
 
   const uni = await getUniversity();
 
-  if (orgId) {
-    const { data: mem } = await supabase
-      .from("org_members")
-      .select("role")
-      .eq("org_id", orgId)
-      .eq("user_id", user.id)
-      .eq("status", "active")
-      .maybeSingle();
-    if (!mem || !["officer", "director"].includes(mem.role)) {
-      return { ok: false, error: "You must be an officer or director to submit on behalf of an org." };
+  const { data: userProfile } = await supabase.from("users").select("is_site_admin").eq("id", user.id).single();
+  const submitterIsAdmin = userProfile?.is_site_admin ?? false;
+
+  if (orgId && !isUniversityPost) {
+    if (!submitterIsAdmin) {
+      const { data: mem } = await supabase
+        .from("org_members")
+        .select("role")
+        .eq("org_id", orgId)
+        .eq("user_id", user.id)
+        .eq("status", "active")
+        .maybeSingle();
+      if (!mem || !["officer", "director"].includes(mem.role)) {
+        return { ok: false, error: "You must be an officer or director to submit on behalf of an org." };
+      }
     }
   }
 
   const svc = createServiceClient();
 
+  const autoApprove = submitterIsAdmin;
+
   const { data, error } = await supabase
     .from("bulletin_posts")
     .insert({
       submitter_id: user.id,
-      org_id: orgId || null,
+      org_id: isUniversityPost ? null : (orgId || null),
+      is_university_post: isUniversityPost,
       event_title: eventTitle,
       event_description: eventDescription || null,
       event_at: eventAt.toISOString(),
       event_location: eventLocation || null,
       website_url: websiteUrl,
       instagram_url: instagramUrl,
-      status: "pending",
+      status: autoApprove ? "approved" : "pending",
       university: uni,
     })
     .select("id")
@@ -145,16 +154,29 @@ export async function cancelBulletinPost(id: string) {
 export type EditBulletinResult = { ok: true } | { ok: false; error: string };
 
 export async function editBulletinPost(
-  id: string,
-  fields: { title: string; description: string; eventAt: string; location: string }
+  _prev: EditBulletinResult | null,
+  formData: FormData
 ): Promise<EditBulletinResult> {
+  const id = String(formData.get("post_id") ?? "").trim();
+  const title = String(formData.get("event_title") ?? "").trim();
+  const description = String(formData.get("event_description") ?? "").trim();
+  const eventAtStr = String(formData.get("event_at") ?? "").trim();
+  const location = String(formData.get("event_location") ?? "").trim();
+  const websiteUrl = String(formData.get("website_url") ?? "").trim() || null;
+  const instagramUrl = String(formData.get("instagram_url") ?? "").trim() || null;
+  const orgId = String(formData.get("org_id") ?? "").trim();
+  const thumbnailFile = formData.get("thumbnail") as File | null;
+  const bannerFile = formData.get("banner") as File | null;
+  const isUniversityPost = orgId === "__university__";
+
+  if (!id) return { ok: false, error: "Missing post ID." };
+  if (title.length < 3) return { ok: false, error: "Title too short." };
+  const eventDate = new Date(eventAtStr);
+  if (isNaN(eventDate.getTime())) return { ok: false, error: "Invalid date." };
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "Not signed in" };
-
-  if (fields.title.length < 3) return { ok: false, error: "Title too short." };
-  const eventDate = new Date(fields.eventAt);
-  if (isNaN(eventDate.getTime())) return { ok: false, error: "Invalid date." };
 
   const { data: profile } = await supabase.from("users").select("is_site_admin").eq("id", user.id).single();
   const isAdmin = profile?.is_site_admin ?? false;
@@ -172,18 +194,53 @@ export async function editBulletinPost(
       isOrgStaff = mem?.role === "director";
     }
     if (!isSubmitter && !isOrgStaff) return { ok: false, error: "Not authorized." };
+
+    if (orgId && !isUniversityPost) {
+      const { data: mem } = await supabase.from("org_members").select("role")
+        .eq("org_id", orgId).eq("user_id", user.id).eq("status", "active").maybeSingle();
+      if (!mem || !["officer", "director"].includes(mem.role)) {
+        return { ok: false, error: "You must be an officer or director to submit on behalf of that org." };
+      }
+    }
   }
 
-  const { error } = await svc.from("bulletin_posts").update({
-    event_title: fields.title,
-    event_description: fields.description || null,
+  const updates: Record<string, unknown> = {
+    event_title: title,
+    event_description: description || null,
     event_at: eventDate.toISOString(),
-    event_location: fields.location || null,
-  }).eq("id", id);
+    event_location: location || null,
+    website_url: websiteUrl,
+    instagram_url: instagramUrl,
+    org_id: isUniversityPost ? null : (orgId || null),
+    is_university_post: isUniversityPost,
+  };
 
+  // Upload images if provided
+  const postId = id;
+  async function uploadImage(file: File, slot: "thumbnail" | "banner") {
+    if (!file || file.size === 0) return;
+    const ext = file.name.split(".").pop() ?? "jpg";
+    const path = `${postId}/${slot}.${ext}`;
+    const bytes = await file.arrayBuffer();
+    const { error: uploadErr } = await svc.storage
+      .from("bulletin-images")
+      .upload(path, bytes, { contentType: file.type, upsert: true });
+    if (!uploadErr) {
+      const { data: { publicUrl } } = svc.storage.from("bulletin-images").getPublicUrl(path);
+      updates[`${slot}_url`] = publicUrl;
+    }
+  }
+
+  await Promise.all([
+    thumbnailFile && thumbnailFile.size > 0 ? uploadImage(thumbnailFile, "thumbnail") : Promise.resolve(),
+    bannerFile && bannerFile.size > 0 ? uploadImage(bannerFile, "banner") : Promise.resolve(),
+  ]);
+
+  const { error } = await svc.from("bulletin_posts").update(updates).eq("id", id);
   if (error) return { ok: false, error: error.message };
 
   revalidatePath("/bulletin");
+  revalidatePath(`/bulletin/${id}`);
   return { ok: true };
 }
 

@@ -24,7 +24,7 @@ export default async function DashboardPage() {
       : Promise.resolve({ data: [] }),
     svc
       .from("bulletin_posts")
-      .select("id, event_title, event_description, event_at, event_location, thumbnail_url, orgs(name)")
+      .select("id, event_title, event_description, event_at, event_location, thumbnail_url, is_university_post, orgs(name)")
       .eq("status", "approved")
       .eq("university", uni)
       .gte("event_at", new Date().toISOString())
@@ -41,6 +41,7 @@ export default async function DashboardPage() {
     event_at: p.event_at,
     event_location: p.event_location ?? null,
     thumbnail_url: (p as unknown as { thumbnail_url: string | null }).thumbnail_url ?? null,
+    is_university_post: (p as unknown as { is_university_post: boolean }).is_university_post ?? false,
     org_name: (p.orgs as { name: string } | null)?.name ?? null,
   }));
 
@@ -56,7 +57,7 @@ export default async function DashboardPage() {
       {carouselPosts.length > 0 && (
         <section>
           <h2 className="text-base font-semibold text-gray-700 mb-2">📢 Upcoming bulletin events</h2>
-          <BulletinCarousel posts={carouselPosts} />
+          <BulletinCarousel posts={carouselPosts} uniLabel={uniInfo.label} />
         </section>
       )}
 

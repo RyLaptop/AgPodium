@@ -10,10 +10,11 @@ type Post = {
   event_at: string;
   event_location: string | null;
   thumbnail_url: string | null;
+  is_university_post: boolean;
   org_name: string | null;
 };
 
-export function BulletinCarousel({ posts }: { posts: Post[] }) {
+export function BulletinCarousel({ posts, uniLabel }: { posts: Post[]; uniLabel: string }) {
   const [idx, setIdx] = useState(0);
 
   useEffect(() => {
@@ -33,10 +34,10 @@ export function BulletinCarousel({ posts }: { posts: Post[] }) {
   const next = () => setIdx((i) => (i + 1) % posts.length);
 
   return (
-    <div className={`relative bg-gradient-to-r from-brand/5 to-brand/10 border border-brand/20 rounded-xl overflow-hidden ${posts.length > 1 ? "pb-14" : ""}`}>
+    <div className={`relative bg-gradient-to-r from-brand/5 to-brand/10 border border-brand/20 rounded-xl overflow-hidden min-h-[168px] ${posts.length > 1 ? "pb-14" : ""}`}>
       <Link href={`/bulletin/${post.id}`} className="flex items-stretch gap-0 group">
         {post.thumbnail_url && (
-          <div className="shrink-0 w-28 md:w-36 self-stretch">
+          <div className="shrink-0 w-32 md:w-44 self-stretch">
             <img
               src={post.thumbnail_url}
               alt=""
@@ -44,10 +45,10 @@ export function BulletinCarousel({ posts }: { posts: Post[] }) {
             />
           </div>
         )}
-        <div className="flex-1 min-w-0 p-5 flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0 p-6 flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
             <p className="text-xs font-semibold text-brand uppercase tracking-wide mb-1">
-              {post.org_name ? `${post.org_name} · ` : ""}
+              {post.is_university_post ? `${uniLabel} · ` : post.org_name ? `${post.org_name} · ` : ""}
               {new Date(post.event_at).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
               {" · "}
               {new Date(post.event_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}

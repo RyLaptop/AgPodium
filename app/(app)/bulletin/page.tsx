@@ -4,7 +4,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { ClearBulletinPost } from "./_clear-post";
 import { PostActions } from "./_post-actions";
 import { AuthGatedLink } from "@/app/(app)/_auth-gate";
-import { getUniversity } from "@/lib/university";
+import { getUniversity, UNIVERSITIES } from "@/lib/university";
 import { AdBanner } from "@/components/ad-banner";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +18,7 @@ type Post = {
   event_at: string;
   event_location: string | null;
   thumbnail_url: string | null;
+  is_university_post: boolean;
   orgs: { name: string; slug: string } | null;
 };
 
@@ -28,6 +29,7 @@ export default async function BulletinPage({
 }) {
   const { submitted } = await searchParams;
   const uni = await getUniversity();
+  const uniLabel = UNIVERSITIES[uni].label;
   const supabase = await createClient();
   const svc = createServiceClient();
 
@@ -39,7 +41,7 @@ export default async function BulletinPage({
     await Promise.all([
       svc
         .from("bulletin_posts")
-        .select("id, submitter_id, org_id, event_title, event_description, event_at, event_location, thumbnail_url, orgs(name, slug)")
+        .select("id, submitter_id, org_id, event_title, event_description, event_at, event_location, thumbnail_url, is_university_post, orgs(name, slug)")
         .eq("status", "approved")
         .eq("university", uni)
         .gte("event_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
@@ -173,7 +175,7 @@ export default async function BulletinPage({
                               </p>
                             )}
                             <p className="text-xs text-gray-500 mt-2">
-                              {p.orgs?.name ? `${p.orgs.name} · ` : ""}
+                              {p.is_university_post ? `${uniLabel} · ` : p.orgs?.name ? `${p.orgs.name} · ` : ""}
                               {p.event_location ?? "Location TBD"}
                             </p>
                           </div>
