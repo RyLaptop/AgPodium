@@ -75,25 +75,25 @@ export default async function RequestsPage() {
     // No nested joins — fetch org/user details separately below
     svc
       .from("org_members")
-      .select("org_id, created_at")
+      .select("org_id, joined_at")
       .eq("user_id", user.id)
       .eq("status", "pending")
-      .order("created_at", { ascending: false }),
+      .order("joined_at", { ascending: false }),
 
     isAdmin
       ? svc
           .from("org_members")
-          .select("user_id, org_id, created_at")
+          .select("user_id, org_id, joined_at")
           .eq("status", "pending")
-          .order("created_at", { ascending: false })
+          .order("joined_at", { ascending: false })
       : myOrgIds.length > 0
         ? svc
             .from("org_members")
-            .select("user_id, org_id, created_at")
+            .select("user_id, org_id, joined_at")
             .in("org_id", myOrgIds)
             .eq("status", "pending")
-            .order("created_at", { ascending: false })
-        : Promise.resolve({ data: [] as { user_id: string; org_id: string; created_at: string }[] }),
+            .order("joined_at", { ascending: false })
+        : Promise.resolve({ data: [] as { user_id: string; org_id: string; joined_at: string }[] }),
 
     svc
       .from("dm_threads")
@@ -140,14 +140,14 @@ export default async function RequestsPage() {
 
   const myJoinReqs = (myJoinRows ?? []).map((r) => ({
     org_id: r.org_id,
-    created_at: r.created_at,
+    joined_at: r.joined_at,
     org: joinOrgsMap.get(r.org_id) ?? null,
   }));
 
   const incomingJoinReqs = (incomingJoinRows ?? []).map((r) => ({
     user_id: r.user_id,
     org_id: r.org_id,
-    created_at: r.created_at,
+    joined_at: r.joined_at,
     org: joinOrgsMap.get(r.org_id) ?? null,
     member: joinUsersMap.get(r.user_id) ?? null,
   }));
@@ -261,7 +261,7 @@ export default async function RequestsPage() {
                         <p className="font-medium text-gray-500 truncate">Unknown org</p>
                       )}
                       <p className="text-xs text-gray-500 mt-0.5">
-                        Submitted {new Date(r.created_at).toLocaleDateString()}
+                        Submitted {new Date(r.joined_at).toLocaleDateString()}
                       </p>
                     </div>
                     <StatusPill status="pending" />
@@ -293,7 +293,7 @@ export default async function RequestsPage() {
                               : <span>Unknown org</span>
                             }
                           </p>
-                          <p className="text-xs text-gray-500 mt-0.5">{new Date(r.created_at).toLocaleDateString()}</p>
+                          <p className="text-xs text-gray-500 mt-0.5">{new Date(r.joined_at).toLocaleDateString()}</p>
                         </div>
                         <JoinRequestActions orgId={r.org_id} userId={r.user_id} />
                       </div>
