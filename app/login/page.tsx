@@ -26,34 +26,11 @@ function Logo() {
   );
 }
 
-function PendingApprovalScreen({ onBack }: { onBack: () => void }) {
-  return (
-    <div className="max-w-md w-full space-y-6 text-center">
-      <Logo />
-      <div className="bg-yellow-50 border border-yellow-200 rounded-xl px-6 py-8 space-y-3">
-        <p className="text-2xl">⏳</p>
-        <h2 className="font-semibold text-gray-900">Account pending approval</h2>
-        <p className="text-sm text-gray-600">
-          Your account has been created and is waiting for an admin to approve it.
-          You&apos;ll be able to sign in once approved.
-        </p>
-      </div>
-      <button
-        onClick={onBack}
-        className="text-sm text-blue-600 hover:underline"
-      >
-        Back to sign in
-      </button>
-    </div>
-  );
-}
-
 function LoginForm() {
   const searchParams = useSearchParams();
   const [mode, setMode] = useState<"signin" | "signup">(
     searchParams.get("mode") === "signup" ? "signup" : "signin"
   );
-  const [verificationDismissed, setVerificationDismissed] = useState(false);
 
   const [signinState, signinAction, signinPending] = useActionState<
     SignInResult | null,
@@ -64,15 +41,6 @@ function LoginForm() {
     SignInResult | null,
     FormData
   >(signUpWithPassword, null);
-
-  // Show pending approval screen after successful signup
-  if (signupState?.ok && signupState.pendingApproval && !verificationDismissed) {
-    return (
-      <PendingApprovalScreen
-        onBack={() => { setVerificationDismissed(true); setMode("signin"); }}
-      />
-    );
-  }
 
   const urlError = searchParams.get("error");
 
