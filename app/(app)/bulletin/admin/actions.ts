@@ -58,6 +58,19 @@ async function deleteAuthAndProfile(targetUserId: string): Promise<Result> {
     await svc.from("speak_requests").delete().in("meeting_id", meetingIds);
     await svc.from("meetings").delete().in("id", meetingIds);
   }
+  // DM threads — user_a, user_b, and initiated_by all reference users without cascade
+  const { data: dmThreadRows } = await svc
+    .from("dm_threads")
+    .select("id")
+    .or(`user_a.eq.${targetUserId},user_b.eq.${targetUserId},initiated_by.eq.${targetUserId}`);
+  const dmThreadIds = (dmThreadRows ?? []).map((t) => t.id);
+  if (dmThreadIds.length > 0) {
+    await svc.from("dm_messages").delete().in("thread_id", dmThreadIds);
+    await svc.from("dm_threads").delete().in("id", dmThreadIds);
+  }
+  // dm_messages where sender_id = user (in threads they didn't own)
+  await svc.from("dm_messages").delete().eq("sender_id", targetUserId);
+
   await Promise.all([
     svc.from("speak_requests").delete().eq("requester_user_id", targetUserId),
     svc.from("chat_messages").delete().eq("user_id", targetUserId),
