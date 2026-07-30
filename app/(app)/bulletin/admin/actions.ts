@@ -42,16 +42,29 @@ export async function adminUpdateUser(
   return { ok: true };
 }
 
+async function deleteAuthAndProfile(targetUserId: string): Promise<Result> {
+  const svc = createServiceClient();
+
+  // Attempt auth deletion — cascades to public.users on success
+  const { error: authErr } = await svc.auth.admin.deleteUser(targetUserId);
+
+  if (authErr) {
+    // Auth deletion failed (e.g. user not found in auth, or project-level restriction).
+    // Delete the profile row directly so the account can't be used regardless.
+    const { error: profileErr } = await svc.from("users").delete().eq("id", targetUserId);
+    if (profileErr) {
+      return { ok: false, error: profileErr.message || "Failed to delete user." };
+    }
+  }
+
+  return { ok: true };
+}
+
 export async function adminDeleteUser(targetUserId: string): Promise<Result> {
   const auth = await requireAdmin();
   if ("error" in auth) return { ok: false, error: auth.error };
-
   if (auth.userId === targetUserId) return { ok: false, error: "Cannot delete your own account." };
-
-  const svc = createServiceClient();
-  const { error } = await svc.auth.admin.deleteUser(targetUserId);
-  if (error) return { ok: false, error: error.message };
-  return { ok: true };
+  return deleteAuthAndProfile(targetUserId);
 }
 
 export async function approveUser(targetUserId: string): Promise<Result> {
@@ -67,11 +80,7 @@ export async function approveUser(targetUserId: string): Promise<Result> {
 export async function denyUser(targetUserId: string): Promise<Result> {
   const auth = await requireAdmin();
   if ("error" in auth) return { ok: false, error: auth.error };
-
-  const svc = createServiceClient();
-  const { error } = await svc.auth.admin.deleteUser(targetUserId);
-  if (error) return { ok: false, error: error.message };
-  return { ok: true };
+  return deleteAuthAndProfile(targetUserId);
 }
 
 export async function sendTestEmail(): Promise<{ ok: boolean; message: string }> {
