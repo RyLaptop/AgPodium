@@ -1,11 +1,10 @@
 "use client";
 
-import { Suspense, useActionState, useEffect, useState, useTransition } from "react";
+import { Suspense, useActionState, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   signInWithPassword,
   signUpWithPassword,
-  resendVerificationEmail,
   type SignInResult,
 } from "@/app/auth/actions";
 
@@ -27,65 +26,17 @@ function Logo() {
   );
 }
 
-function VerificationScreen({ email, onBack }: { email: string; onBack: () => void }) {
-  const [secondsLeft, setSecondsLeft] = useState(30);
-  const [resendStatus, setResendStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
-  const [resendError, setResendError] = useState("");
-  const [, startTransition] = useTransition();
-
-  useEffect(() => {
-    if (secondsLeft <= 0) return;
-    const t = setTimeout(() => setSecondsLeft((s) => s - 1), 1000);
-    return () => clearTimeout(t);
-  }, [secondsLeft]);
-
-  const handleResend = () => {
-    setResendStatus("sending");
-    startTransition(async () => {
-      const res = await resendVerificationEmail(email);
-      if (res.ok) {
-        setResendStatus("sent");
-        setSecondsLeft(30);
-      } else {
-        setResendStatus("error");
-        setResendError(res.error);
-      }
-    });
-  };
-
+function PendingApprovalScreen({ onBack }: { onBack: () => void }) {
   return (
     <div className="max-w-md w-full space-y-6 text-center">
       <Logo />
-      <div className="bg-green-50 border border-green-200 rounded-xl px-6 py-8 space-y-3">
-        <p className="text-2xl">📬</p>
-        <h2 className="font-semibold text-gray-900">Check your email</h2>
+      <div className="bg-yellow-50 border border-yellow-200 rounded-xl px-6 py-8 space-y-3">
+        <p className="text-2xl">⏳</p>
+        <h2 className="font-semibold text-gray-900">Account pending approval</h2>
         <p className="text-sm text-gray-600">
-          We sent a verification link to{" "}
-          <span className="font-medium text-gray-800">{email}</span>.
-          Click it to activate your account.
+          Your account has been created and is waiting for an admin to approve it.
+          You&apos;ll be able to sign in once approved.
         </p>
-        <p className="text-xs text-gray-400 pt-2">
-          Didn&apos;t get it? Check your spam folder.
-        </p>
-        <div className="pt-1">
-          {secondsLeft > 0 ? (
-            <p className="text-xs text-gray-400">
-              {resendStatus === "sent" ? "Email sent! Resend in " : "Resend in "}
-              <span className="font-medium text-gray-600">{secondsLeft}s</span>
-            </p>
-          ) : (
-            <button
-              onClick={handleResend}
-              disabled={resendStatus === "sending"}
-              className="text-sm text-blue-600 hover:underline disabled:opacity-50"
-            >
-              {resendStatus === "sending" ? "Sending…" : "Send again"}
-            </button>
-          )}
-          {resendStatus === "error" && (
-            <p className="text-xs text-red-500 mt-1">{resendError}</p>
-          )}
-        </div>
       </div>
       <button
         onClick={onBack}
@@ -114,11 +65,10 @@ function LoginForm() {
     FormData
   >(signUpWithPassword, null);
 
-  // Show verification prompt after successful signup
-  if (signupState?.ok && signupState.needsVerification && !verificationDismissed) {
+  // Show pending approval screen after successful signup
+  if (signupState?.ok && signupState.pendingApproval && !verificationDismissed) {
     return (
-      <VerificationScreen
-        email={signupState.email}
+      <PendingApprovalScreen
         onBack={() => { setVerificationDismissed(true); setMode("signin"); }}
       />
     );

@@ -54,6 +54,26 @@ export async function adminDeleteUser(targetUserId: string): Promise<Result> {
   return { ok: true };
 }
 
+export async function approveUser(targetUserId: string): Promise<Result> {
+  const auth = await requireAdmin();
+  if ("error" in auth) return { ok: false, error: auth.error };
+
+  const svc = createServiceClient();
+  const { error } = await svc.from("users").update({ is_verified: true }).eq("id", targetUserId);
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+export async function denyUser(targetUserId: string): Promise<Result> {
+  const auth = await requireAdmin();
+  if ("error" in auth) return { ok: false, error: auth.error };
+
+  const svc = createServiceClient();
+  const { error } = await svc.auth.admin.deleteUser(targetUserId);
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
 export async function sendTestEmail(): Promise<{ ok: boolean; message: string }> {
   const auth = await requireAdmin();
   if ("error" in auth) return { ok: false, message: auth.error };

@@ -4,6 +4,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { ReviewQueue } from "./_review-queue";
 import { OrgApprovalQueue } from "./_org-approval";
 import { UserList } from "./_user-list";
+import { PendingUsers } from "./_pending-users";
 import { TestEmailButton } from "./_test-email";
 import { getUniversity } from "@/lib/university";
 
@@ -30,7 +31,7 @@ export default async function BulletinAdminPage() {
 
   const uni = await getUniversity();
   const admin = createServiceClient();
-  const [{ data: pendingPosts }, { data: pendingOrgs }, { data: allUsers }, authUsersResult] = await Promise.all([
+  const [{ data: pendingPosts }, { data: pendingOrgs }, { data: allUsers }, { data: pendingAccounts }, authUsersResult] = await Promise.all([
     admin.from("bulletin_posts")
       .select("id, event_title, event_description, event_at, event_location, created_at, users!bulletin_posts_submitter_id_fkey(full_name, email), orgs(name)")
       .eq("status", "pending")
@@ -42,8 +43,13 @@ export default async function BulletinAdminPage() {
       .eq("university", uni)
       .order("created_at", { ascending: true }),
     admin.from("users")
-      .select("id, email, full_name, avatar_url, is_site_admin, created_at")
+      .select("id, email, full_name, avatar_url, is_site_admin, is_verified, created_at")
       .order("created_at", { ascending: false }),
+    admin.from("users")
+      .select("id, email, full_name, created_at")
+      .eq("is_verified", false)
+      .eq("is_site_admin", false)
+      .order("created_at", { ascending: true }),
     admin.auth.admin.listUsers({ perPage: 1000 }),
   ]);
 
@@ -70,7 +76,11 @@ export default async function BulletinAdminPage() {
     ...u,
     last_sign_in_at: lastSignInMap.get(u.id) ?? null,
   })) as {
-    id: string; email: string; full_name: string | null; avatar_url: string | null; is_site_admin: boolean; created_at: string; last_sign_in_at: string | null;
+    id: string; email: string; full_name: string | null; avatar_url: string | null; is_site_admin: boolean; is_verified: boolean; created_at: string; last_sign_in_at: string | null;
+  }[];
+
+  const pendingAccountsList = (pendingAccounts ?? []) as {
+    id: string; email: string; full_name: string | null; created_at: string;
   }[];
 
   return (
@@ -79,6 +89,13 @@ export default async function BulletinAdminPage() {
         <h1 className="text-3xl font-bold">Admin</h1>
         <TestEmailButton />
       </div>
+
+      {pendingAccountsList.length > 0 && (
+        <section>
+          <h2 className="text-xl font-semibold mb-3">Pending account approvals ({pendingAccountsList.length})</h2>
+          <PendingUsers users={pendingAccountsList} />
+        </section>
+      )}
 
       {pendingOrgsList.length > 0 && (
         <section>

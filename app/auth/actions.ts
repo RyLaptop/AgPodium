@@ -3,11 +3,12 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { isEmailAllowed } from "@/lib/auth/allowed-domains";
 import type { University } from "@/lib/university";
 
 export type SignInResult =
-  | { ok: true; email: string; needsVerification?: boolean }
+  | { ok: true; email: string; pendingApproval?: boolean }
   | { ok: false; error: string };
 
 export async function signInWithPassword(
@@ -28,9 +29,6 @@ export async function signInWithPassword(
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
-    if (error.message.toLowerCase().includes("email not confirmed")) {
-      return { ok: false, error: "Please verify your email before signing in. Check your inbox for a confirmation link." };
-    }
     return { ok: false, error: error.message };
   }
   redirect("/dashboard");
@@ -65,46 +63,25 @@ export async function signUpWithPassword(
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: {
-      data: { full_name: name },
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/auth/confirm`,
-    },
+    options: { data: { full_name: name } },
   });
 
   if (error) {
     return { ok: false, error: error.message };
   }
-
-  // Set their university cookie now so it's ready after email verification
-  const jar = await cookies();
-  const cookieOpts = { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax" } as const;
-  jar.set("uni", university, cookieOpts);
-
-  // No session means Supabase sent a verification email — tell the UI to show the check-inbox screen
-  if (!data.session) {
-    return { ok: true, email, needsVerification: true };
+  if (!data.user) {
+    return { ok: false, error: "Signup failed." };
   }
 
-  // Email confirmation is disabled in the Supabase project — sign in happened immediately
-  redirect("/dashboard");
-}
+  // Auto-confirm the email so no verification email is sent —
+  // account access is gated by admin approval (is_verified) instead.
+  const svc = createServiceClient();
+  await svc.auth.admin.updateUserById(data.user.id, { email_confirm: true });
 
-export async function resendVerificationEmail(
-  email: string
-): Promise<{ ok: true } | { ok: false; error: string }> {
-  if (!email) return { ok: false, error: "No email provided." };
+  const jar = await cookies();
+  jar.set("uni", university, { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax" });
 
-  const supabase = await createClient();
-  const { error } = await supabase.auth.resend({
-    type: "signup",
-    email,
-    options: {
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/auth/confirm`,
-    },
-  });
-
-  if (error) return { ok: false, error: error.message };
-  return { ok: true };
+  return { ok: true, email, pendingApproval: true };
 }
 
 export async function signOut() {

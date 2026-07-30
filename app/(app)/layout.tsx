@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/auth/actions";
 import { NotificationBell, type Notification } from "./_notification-bell";
@@ -21,7 +22,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     ? await Promise.all([
         supabase
           .from("users")
-          .select("full_name, email, avatar_url, is_site_admin")
+          .select("full_name, email, avatar_url, is_site_admin, is_verified")
           .eq("id", user.id)
           .single()
           .then((r) => r.data),
@@ -47,6 +48,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           .then((r) => r.data ?? []),
       ])
     : [null, 0, 0, []];
+
+  if (user && profile && !(profile as { is_verified?: boolean; is_site_admin?: boolean }).is_verified && !(profile as { is_site_admin?: boolean }).is_site_admin) {
+    redirect("/pending");
+  }
 
   const displayName = profile?.full_name ?? user?.email ?? "Guest";
   const requestBadge = (unreadOwn as number) + (unreadIncoming as number);
