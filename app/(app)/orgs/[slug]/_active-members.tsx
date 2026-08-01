@@ -85,7 +85,7 @@ function MemberRow({ orgId, member, isSelf }: { orgId: string; member: ActiveMem
   };
 
   const roleLabel =
-    member.role === "director" ? "STAFF" : member.role === "officer" ? "Officer" : "Member";
+    member.role === "director" ? "Director" : member.role === "officer" ? "Staff" : "Member";
 
   return (
     <li className="border border-gray-200 rounded-lg px-4 py-3 space-y-2">
