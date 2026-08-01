@@ -23,13 +23,17 @@ export function PostForm({ orgId, orgSlug }: { orgId: string; orgSlug: string })
     if (!formRef.current) return;
     const fd = new FormData(formRef.current);
     startTransition(async () => {
-      setError(null);
-      const res = await createOrgPost(orgId, orgSlug, fd);
-      if (!res.ok) { setError(res.error); return; }
-      setOpen(false);
-      setPreview(null);
-      formRef.current?.reset();
-      router.refresh();
+      try {
+        setError(null);
+        const res = await createOrgPost(orgId, orgSlug, fd);
+        if (!res.ok) { setError(res.error); return; }
+        setOpen(false);
+        setPreview(null);
+        formRef.current?.reset();
+        router.refresh();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Upload failed. Try a smaller image.");
+      }
     });
   };
 
