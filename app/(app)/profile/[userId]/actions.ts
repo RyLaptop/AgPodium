@@ -3,14 +3,17 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { UNIVERSITIES } from "@/lib/university-data";
 import type { University } from "@/lib/university";
 
 const MAX_SWITCHES = 2;
 const WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 
+const VALID_UNI_KEYS = Object.keys(UNIVERSITIES) as University[];
+
 export async function changeUniversity(formData: FormData) {
   const newUni = String(formData.get("uni") ?? "") as University;
-  if (newUni !== "tamu" && newUni !== "lsu") return;
+  if (!VALID_UNI_KEYS.includes(newUni)) return;
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();

@@ -2,12 +2,14 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { Calendar, type CalEvent } from "./_calendar";
 import { AdBanner } from "@/components/ad-banner";
+import { getUniversity } from "@/lib/university";
 
 export const dynamic = "force-dynamic";
 
 export default async function CalendarPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
+  const uni = await getUniversity();
   const from = new Date();
   from.setMonth(from.getMonth() - 1);
   from.setDate(1);
@@ -20,14 +22,16 @@ export default async function CalendarPage() {
     user
       ? supabase
           .from("org_members")
-          .select("org_id")
+          .select("org_id, orgs!inner(university)")
           .eq("user_id", user.id)
           .eq("status", "active")
+          .eq("orgs.university", uni)
       : Promise.resolve({ data: [] }),
     svc
       .from("bulletin_posts")
       .select("event_title, event_at")
       .eq("status", "approved")
+      .eq("university", uni)
       .not("event_at", "is", null)
       .gte("event_at", from.toISOString())
       .lte("event_at", to.toISOString()),

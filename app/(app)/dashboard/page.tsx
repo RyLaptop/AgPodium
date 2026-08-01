@@ -19,8 +19,9 @@ export default async function DashboardPage() {
     user
       ? supabase
           .from("org_members")
-          .select("role, orgs(id, slug, name, description)")
+          .select("role, orgs!inner(id, slug, name, description, university)")
           .eq("user_id", user.id)
+          .eq("orgs.university", uni)
       : Promise.resolve({ data: [] }),
     svc
       .from("bulletin_posts")
@@ -34,6 +35,7 @@ export default async function DashboardPage() {
       .from("orgs")
       .select("id, slug, name, description, logo_url")
       .eq("is_featured", true)
+      .eq("university", uni)
       .maybeSingle(),
   ]);
 
@@ -152,7 +154,7 @@ export default async function DashboardPage() {
                           ? "bg-brand/10 text-brand-dark"
                           : "bg-gray-100 text-gray-600"
                       }`}>
-                        {m.role === "director" ? "STAFF" : m.role === "officer" ? "Officer" : "Member"}
+                        {m.role === "director" ? "Director" : m.role === "officer" ? "Staff" : "Member"}
                       </span>
                     </div>
                     {org.description && (

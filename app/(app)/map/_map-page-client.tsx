@@ -3,8 +3,19 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createBrowserClient } from "@supabase/ssr";
+import { UNIVERSITIES } from "@/lib/university-data";
+import type { University } from "@/lib/university-data";
 import { MapWrapper } from "./_map-wrapper";
 import { AdBanner } from "@/components/ad-banner";
+
+const VALID_UNI_KEYS = Object.keys(UNIVERSITIES) as University[];
+
+function getUniFromCookie(): University {
+  if (typeof document === "undefined") return "tamu";
+  const match = document.cookie.match(/(?:^|;\s*)uni=([^;]+)/);
+  const val = match?.[1] as University | undefined;
+  return val && VALID_UNI_KEYS.includes(val) ? val : "tamu";
+}
 
 type MapMeeting = {
   id: string;
@@ -21,8 +32,12 @@ export function MapPageClient() {
   const [meetings, setMeetings] = useState<MapMeeting[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [uniName, setUniName] = useState("my university");
 
   useEffect(() => {
+    const uni = getUniFromCookie();
+    setUniName(UNIVERSITIES[uni].name);
+
     const supabase = createBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -34,7 +49,11 @@ export function MapPageClient() {
         if (!user) { setLoading(false); return; }
 
         const [{ data: memberships }, { data: myRequests }] = await Promise.all([
-          supabase.from("org_members").select("org_id").eq("user_id", user.id).eq("status", "active"),
+          supabase.from("org_members")
+            .select("org_id, orgs!inner(university)")
+            .eq("user_id", user.id)
+            .eq("status", "active")
+            .eq("orgs.university", uni),
           supabase.from("speak_requests").select("meeting_id").eq("requester_user_id", user.id).eq("status", "approved"),
         ]);
 
@@ -161,7 +180,7 @@ export function MapPageClient() {
                 </p>
                 {m.location && (
                   <a
-                    href={`https://maps.google.com/?q=${encodeURIComponent(m.location + " Texas A&M University")}`}
+                    href={`https://maps.google.com/?q=${encodeURIComponent(m.location + " " + uniName)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}
