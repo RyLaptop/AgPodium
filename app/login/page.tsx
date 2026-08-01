@@ -114,6 +114,14 @@ function LoginForm() {
             placeholder="Password (8+ characters)"
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
+          <input
+            type="password"
+            name="confirm_password"
+            required
+            autoComplete="new-password"
+            placeholder="Confirm password"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
           <select
             name="university"
             required
@@ -124,6 +132,12 @@ function LoginForm() {
             <option value="tamu">Texas A&amp;M University</option>
             <option value="lsu">Louisiana State University</option>
           </select>
+          <p className="text-xs text-center text-gray-400">
+            Don&apos;t see your university?{" "}
+            <a href="/ambassador" className="text-blue-600 hover:underline">
+              Apply to be a campus ambassador
+            </a>
+          </p>
           <button
             type="submit"
             disabled={signupPending}

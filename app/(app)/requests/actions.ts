@@ -5,8 +5,6 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { notify } from "@/lib/notifications";
-import { sendEmail } from "@/lib/email/send";
-import { orgIncomingSpeakRequestEmail } from "@/lib/email/templates";
 
 export type CreateRequestResult =
   | { ok: true; id: string }
@@ -138,10 +136,7 @@ export async function submitSpeakRequests(
     const orgSlug = (m.orgs as unknown as { name: string; slug: string } | null)?.slug ?? "";
     const meetingPath = orgSlug ? `/orgs/${orgSlug}/meetings/${m.id}` : "/requests";
 
-    const [{ data: officers }, { data: orgData }] = await Promise.all([
-      svc.from("org_members").select("user_id").eq("org_id", m.org_id).in("role", ["officer", "director"]).eq("status", "active"),
-      svc.from("orgs").select("contact_email").eq("id", m.org_id).single(),
-    ]);
+    const { data: officers } = await svc.from("org_members").select("user_id").eq("org_id", m.org_id).in("role", ["officer", "director"]).eq("status", "active");
 
     if (officers && officers.length > 0) {
       await notify(
@@ -153,19 +148,6 @@ export async function submitSpeakRequests(
           link: meetingPath,
         }))
       );
-    }
-
-    const contactEmail = (orgData as unknown as { contact_email?: string | null } | null)?.contact_email;
-    if (contactEmail) {
-      const tmpl = orgIncomingSpeakRequestEmail({
-        orgName,
-        requesterName,
-        requesterOrgName,
-        meetingTitle: m.title,
-        pitch: firstPitch,
-        meetingPath,
-      });
-      await sendEmail({ to: contactEmail, ...tmpl });
     }
   }
 
@@ -239,11 +221,7 @@ export async function createSpeakRequest(
   if (meeting) {
     const orgName = (meeting.orgs as unknown as { name: string } | null)?.name ?? "";
     const requesterName = me?.full_name ?? user.email ?? "Someone";
-    const svc2 = createServiceClient();
-    const [{ data: officers }, { data: orgContact }] = await Promise.all([
-      supabase.from("org_members").select("user_id").eq("org_id", meeting.org_id).in("role", ["officer", "director"]).eq("status", "active"),
-      svc2.from("orgs").select("contact_email, slug").eq("id", meeting.org_id).single(),
-    ]);
+    const { data: officers } = await supabase.from("org_members").select("user_id").eq("org_id", meeting.org_id).in("role", ["officer", "director"]).eq("status", "active");
     if (officers && officers.length > 0) {
       await notify(officers.map((o) => ({
         userId: o.user_id,
@@ -252,19 +230,6 @@ export async function createSpeakRequest(
         body: `${requesterName}${orgName ? ` (${orgName})` : ""} wants to speak`,
         link: `/requests/${data.id}`,
       })));
-    }
-    const orgContactEmail = (orgContact as unknown as { contact_email?: string | null; slug?: string } | null)?.contact_email;
-    const orgSlugReal = (orgContact as unknown as { contact_email?: string | null; slug?: string } | null)?.slug ?? orgSlug;
-    if (orgContactEmail) {
-      const tmpl = orgIncomingSpeakRequestEmail({
-        orgName,
-        requesterName,
-        requesterOrgName: requesterOrgId ? null : null,
-        meetingTitle: meeting.title,
-        pitch,
-        meetingPath: `/orgs/${orgSlugReal}/meetings/${meetingId}`,
-      });
-      await sendEmail({ to: orgContactEmail, ...tmpl });
     }
   }
 

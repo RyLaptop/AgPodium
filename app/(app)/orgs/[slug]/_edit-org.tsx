@@ -16,6 +16,9 @@ export function EditOrgForm({
   currentWebsiteUrl,
   currentTiktokUrl,
   currentInstagramUrl,
+  currentGroupmeUrl,
+  currentFlareUrl,
+  currentSocialLinksLocked,
 }: {
   orgId: string;
   orgSlug: string;
@@ -27,6 +30,9 @@ export function EditOrgForm({
   currentWebsiteUrl?: string | null;
   currentTiktokUrl?: string | null;
   currentInstagramUrl?: string | null;
+  currentGroupmeUrl?: string | null;
+  currentFlareUrl?: string | null;
+  currentSocialLinksLocked?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(currentName);
@@ -36,6 +42,9 @@ export function EditOrgForm({
   const [websiteUrl, setWebsiteUrl] = useState(currentWebsiteUrl ?? "");
   const [tiktokUrl, setTiktokUrl] = useState(currentTiktokUrl ?? "");
   const [instagramUrl, setInstagramUrl] = useState(currentInstagramUrl ?? "");
+  const [groupmeUrl, setGroupmeUrl] = useState(currentGroupmeUrl ?? "");
+  const [flareUrl, setFlareUrl] = useState(currentFlareUrl ?? "");
+  const [socialLinksLocked, setSocialLinksLocked] = useState(currentSocialLinksLocked ?? false);
   const [logoPreview, setLogoPreview] = useState<string | null>(currentLogoUrl ?? null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -72,6 +81,9 @@ export function EditOrgForm({
         websiteUrl: websiteUrl.trim() || undefined,
         tiktokUrl: tiktokUrl.trim() || undefined,
         instagramUrl: instagramUrl.trim() || undefined,
+        groupmeUrl: groupmeUrl.trim() || undefined,
+        flareUrl: flareUrl.trim() || undefined,
+        socialLinksLocked,
       });
       if (!res.ok) setError(res.error);
       else { setOpen(false); router.refresh(); }
@@ -195,6 +207,46 @@ export function EditOrgForm({
             className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand text-sm"
           />
         </label>
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-sm font-medium">Community chat links</span>
+          <label className="flex items-center gap-1.5 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={socialLinksLocked}
+              onChange={(e) => setSocialLinksLocked(e.target.checked)}
+              className="rounded border-gray-300 text-brand focus:ring-brand"
+            />
+            <span className="text-xs text-gray-500">Members only</span>
+          </label>
+        </div>
+        <p className="text-xs text-gray-400 mb-2">
+          {socialLinksLocked ? "🔒 Visible to active members only." : "Visible to everyone."}
+        </p>
+        <div className="grid grid-cols-2 gap-3">
+          <label className="block">
+            <span className="text-xs text-gray-600">GroupMe</span>
+            <input
+              type="url"
+              value={groupmeUrl}
+              onChange={(e) => setGroupmeUrl(e.target.value)}
+              placeholder="https://groupme.com/join_group/..."
+              className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand text-sm"
+            />
+          </label>
+          <label className="block">
+            <span className="text-xs text-gray-600">Flare</span>
+            <input
+              type="url"
+              value={flareUrl}
+              onChange={(e) => setFlareUrl(e.target.value)}
+              placeholder="https://..."
+              className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand text-sm"
+            />
+          </label>
+        </div>
       </div>
 
       <div>

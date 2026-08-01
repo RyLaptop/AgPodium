@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { isAuthorizedCronRequest } from "@/lib/cron-auth";
-import { getResend, FROM_EMAIL } from "@/lib/email/resend";
-import { reminderEmail } from "@/lib/email/templates";
 
 export const dynamic = "force-dynamic";
 
@@ -59,35 +57,12 @@ export async function GET(req: Request) {
     return t >= in1h.lo && t <= in1h.hi;
   });
 
-  if (due24h.length === 0 && due1h.length === 0) {
-    return NextResponse.json({ sent24h: 0, sent1h: 0 });
-  }
-
-  const userIds = Array.from(
-    new Set([...due24h, ...due1h].map((r) => r.requester_user_id))
-  );
-  const { data: users } = await supabase
-    .from("users")
-    .select("id, email, full_name")
-    .in("id", userIds);
-  const userMap = new Map((users ?? []).map((u) => [u.id, u]));
-
-  const resend = getResend();
+  // Mark reminders as "sent" to prevent re-processing, but do not send emails
+  // (email notifications are restricted to org creation, bulletin, and DM events only)
   let sent24h = 0;
   let sent1h = 0;
 
   for (const r of due24h) {
-    const u = userMap.get(r.requester_user_id);
-    if (!u || !r.meetings) continue;
-    const { subject, html } = reminderEmail({
-      recipientName: u.full_name ?? u.email.split("@")[0],
-      orgName: r.meetings.orgs?.name ?? "the org",
-      meetingTitle: r.meetings.title,
-      startsAt: r.meetings.starts_at,
-      location: r.meetings.location,
-      hoursOut: 24,
-    });
-    await resend.emails.send({ from: FROM_EMAIL, to: u.email, subject, html });
     await supabase
       .from("speak_requests")
       .update({ reminder_24h_sent_at: new Date().toISOString() })
@@ -96,17 +71,6 @@ export async function GET(req: Request) {
   }
 
   for (const r of due1h) {
-    const u = userMap.get(r.requester_user_id);
-    if (!u || !r.meetings) continue;
-    const { subject, html } = reminderEmail({
-      recipientName: u.full_name ?? u.email.split("@")[0],
-      orgName: r.meetings.orgs?.name ?? "the org",
-      meetingTitle: r.meetings.title,
-      startsAt: r.meetings.starts_at,
-      location: r.meetings.location,
-      hoursOut: 1,
-    });
-    await resend.emails.send({ from: FROM_EMAIL, to: u.email, subject, html });
     await supabase
       .from("speak_requests")
       .update({ reminder_1h_sent_at: new Date().toISOString() })

@@ -58,6 +58,10 @@ export async function signUpWithPassword(
   if (password.length < 8) {
     return { ok: false, error: "Password must be at least 8 characters." };
   }
+  const confirmPassword = String(formData.get("confirm_password") ?? "");
+  if (password !== confirmPassword) {
+    return { ok: false, error: "Passwords do not match." };
+  }
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({

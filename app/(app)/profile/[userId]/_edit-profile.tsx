@@ -11,17 +11,29 @@ export function EditProfileForm({
   currentBio,
   currentMajor,
   currentAvatarUrl,
+  currentLinkedinUrl,
+  currentInstagramUrl,
+  currentTiktokUrl,
+  currentContactEmail,
 }: {
   currentName: string | null;
   currentBio: string | null;
   currentMajor: string | null;
   currentAvatarUrl: string | null;
+  currentLinkedinUrl?: string | null;
+  currentInstagramUrl?: string | null;
+  currentTiktokUrl?: string | null;
+  currentContactEmail?: string | null;
 }) {
   const isPhoto = !!currentAvatarUrl?.startsWith("http");
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(currentName ?? "");
   const [bio, setBio] = useState(currentBio ?? "");
   const [major, setMajor] = useState(currentMajor ?? "");
+  const [linkedinUrl, setLinkedinUrl] = useState(currentLinkedinUrl ?? "");
+  const [instagramUrl, setInstagramUrl] = useState(currentInstagramUrl ?? "");
+  const [tiktokUrl, setTiktokUrl] = useState(currentTiktokUrl ?? "");
+  const [contactEmail, setContactEmail] = useState(currentContactEmail ?? "");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(isPhoto ? null : currentAvatarUrl);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(isPhoto ? currentAvatarUrl : null);
@@ -77,7 +89,7 @@ export function EditProfileForm({
         finalAvatarUrl = avatarUrl;
       }
 
-      const res = await updateProfile({ name, bio, major, avatarUrl: finalAvatarUrl });
+      const res = await updateProfile({ name, bio, major, avatarUrl: finalAvatarUrl, linkedinUrl, instagramUrl, tiktokUrl, contactEmail });
       if (!res.ok) setError(res.error);
       else { setOpen(false); router.refresh(); }
     });
@@ -188,6 +200,53 @@ export function EditProfileForm({
           className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand resize-none"
         />
       </label>
+
+      <div>
+        <p className="text-sm font-medium mb-2">Links</p>
+        <div className="space-y-2">
+          <label className="block">
+            <span className="text-xs text-gray-500">LinkedIn</span>
+            <input
+              type="url"
+              value={linkedinUrl}
+              onChange={(e) => setLinkedinUrl(e.target.value)}
+              placeholder="https://linkedin.com/in/yourname"
+              className="mt-0.5 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand"
+            />
+          </label>
+          <label className="block">
+            <span className="text-xs text-gray-500">Instagram</span>
+            <input
+              type="url"
+              value={instagramUrl}
+              onChange={(e) => setInstagramUrl(e.target.value)}
+              placeholder="https://instagram.com/yourhandle"
+              className="mt-0.5 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand"
+            />
+          </label>
+          <label className="block">
+            <span className="text-xs text-gray-500">TikTok</span>
+            <input
+              type="url"
+              value={tiktokUrl}
+              onChange={(e) => setTiktokUrl(e.target.value)}
+              placeholder="https://tiktok.com/@yourhandle"
+              className="mt-0.5 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand"
+            />
+          </label>
+          <label className="block">
+            <span className="text-xs text-gray-500">Contact email (public)</span>
+            <input
+              type="email"
+              value={contactEmail}
+              onChange={(e) => setContactEmail(e.target.value)}
+              placeholder="hello@example.com"
+              className="mt-0.5 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand"
+            />
+          </label>
+        </div>
+      </div>
+
       {error && <p className="text-sm text-red-600">{error}</p>}
       <div className="flex gap-2">
         <button

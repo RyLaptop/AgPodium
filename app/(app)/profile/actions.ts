@@ -12,6 +12,10 @@ export async function updateProfile(fields: {
   bio: string;
   major: string;
   avatarUrl?: string | null;
+  linkedinUrl?: string | null;
+  instagramUrl?: string | null;
+  tiktokUrl?: string | null;
+  contactEmail?: string | null;
 }): Promise<UpdateProfileResult> {
   const name = fields.name.trim();
   if (name.length < 1) return { ok: false, error: "Name is required." };
@@ -25,6 +29,10 @@ export async function updateProfile(fields: {
     bio: fields.bio.trim() || null,
     major: fields.major.trim() || null,
     avatar_url: fields.avatarUrl ?? null,
+    linkedin_url: fields.linkedinUrl?.trim() || null,
+    instagram_url: fields.instagramUrl?.trim() || null,
+    tiktok_url: fields.tiktokUrl?.trim() || null,
+    contact_email: fields.contactEmail?.trim() || null,
   }).eq("id", user.id);
 
   if (error) return { ok: false, error: error.message };

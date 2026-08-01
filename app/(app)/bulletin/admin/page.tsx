@@ -6,6 +6,7 @@ import { OrgApprovalQueue } from "./_org-approval";
 import { UserList } from "./_user-list";
 import { PendingUsers } from "./_pending-users";
 import { TestEmailButton } from "./_test-email";
+import { FeaturedOrgPicker } from "./_featured-org";
 import { getUniversity } from "@/lib/university";
 
 export const dynamic = "force-dynamic";
@@ -31,7 +32,7 @@ export default async function BulletinAdminPage() {
 
   const uni = await getUniversity();
   const admin = createServiceClient();
-  const [{ data: pendingPosts }, { data: pendingOrgs }, { data: allUsers }, { data: pendingAccounts }, authUsersResult] = await Promise.all([
+  const [{ data: pendingPosts }, { data: pendingOrgs }, { data: allUsers }, { data: pendingAccounts }, { data: approvedOrgs }, authUsersResult] = await Promise.all([
     admin.from("bulletin_posts")
       .select("id, event_title, event_description, event_at, event_location, created_at, users!bulletin_posts_submitter_id_fkey(full_name, email), orgs(name)")
       .eq("status", "pending")
@@ -50,6 +51,10 @@ export default async function BulletinAdminPage() {
       .eq("is_verified", false)
       .eq("is_site_admin", false)
       .order("created_at", { ascending: true }),
+    admin.from("orgs")
+      .select("id, name, is_featured")
+      .eq("status", "approved")
+      .order("name"),
     admin.auth.admin.listUsers({ perPage: 1000 }),
   ]);
 
@@ -83,12 +88,23 @@ export default async function BulletinAdminPage() {
     id: string; email: string; full_name: string | null; created_at: string;
   }[];
 
+  const approvedOrgsList = (approvedOrgs ?? []) as { id: string; name: string; is_featured: boolean }[];
+  const featuredOrgId = approvedOrgsList.find((o) => o.is_featured)?.id ?? null;
+
   return (
     <div className="space-y-8">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <h1 className="text-3xl font-bold">Admin</h1>
         <TestEmailButton />
       </div>
+
+      <section>
+        <h2 className="text-xl font-semibold mb-3">Featured org of the week</h2>
+        <FeaturedOrgPicker
+          currentFeaturedId={featuredOrgId}
+          orgs={approvedOrgsList.map((o) => ({ id: o.id, name: o.name }))}
+        />
+      </section>
 
       {pendingAccountsList.length > 0 && (
         <section>

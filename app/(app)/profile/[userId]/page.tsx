@@ -37,7 +37,7 @@ export default async function ProfilePage({
     await Promise.all([
       svc
         .from("users")
-        .select("id, full_name, email, bio, major, avatar_url, created_at, is_site_admin")
+        .select("id, full_name, email, bio, major, avatar_url, created_at, is_site_admin, linkedin_url, instagram_url, tiktok_url, contact_email")
         .eq("id", userId)
         .single(),
       svc
@@ -84,6 +84,26 @@ export default async function ProfilePage({
         {!profile.bio && !profile.major && isSelf && (
           <p className="text-gray-400 mt-2 text-sm italic">Add your major and a bio so others know who you are.</p>
         )}
+        {(() => {
+          const p = profile as unknown as { linkedin_url?: string | null; instagram_url?: string | null; tiktok_url?: string | null; contact_email?: string | null };
+          const ensureProtocol = (url: string) => /^https?:\/\//i.test(url) ? url : `https://${url}`;
+          const links = [
+            p.linkedin_url ? { href: ensureProtocol(p.linkedin_url), label: "LinkedIn" } : null,
+            p.instagram_url ? { href: ensureProtocol(p.instagram_url), label: "Instagram" } : null,
+            p.tiktok_url ? { href: ensureProtocol(p.tiktok_url), label: "TikTok" } : null,
+            p.contact_email ? { href: `mailto:${p.contact_email}`, label: p.contact_email } : null,
+          ].filter(Boolean) as { href: string; label: string }[];
+          return links.length > 0 ? (
+            <div className="flex flex-wrap gap-3 mt-3">
+              {links.map((l) => (
+                <a key={l.label} href={l.href} target="_blank" rel="noopener noreferrer"
+                  className="text-xs text-brand hover:underline">
+                  {l.label} ↗
+                </a>
+              ))}
+            </div>
+          ) : null;
+        })()}
         {!isSelf && (
           <div className="mt-4">
             <MessageButton
@@ -100,6 +120,10 @@ export default async function ProfilePage({
               currentBio={profile.bio ?? null}
               currentMajor={profile.major ?? null}
               currentAvatarUrl={profile.avatar_url ?? null}
+              currentLinkedinUrl={(profile as unknown as { linkedin_url?: string | null }).linkedin_url ?? null}
+              currentInstagramUrl={(profile as unknown as { instagram_url?: string | null }).instagram_url ?? null}
+              currentTiktokUrl={(profile as unknown as { tiktok_url?: string | null }).tiktok_url ?? null}
+              currentContactEmail={(profile as unknown as { contact_email?: string | null }).contact_email ?? null}
             />
           </div>
         )}

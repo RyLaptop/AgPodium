@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { notify } from "@/lib/notifications";
 import { sendEmail } from "@/lib/email/send";
-import { orgIncomingJoinRequestEmail } from "@/lib/email/templates";
+import { orgCreationDecisionEmail } from "@/lib/email/templates";
 import { getUniversity } from "@/lib/university";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -111,19 +111,6 @@ export async function joinOrg(orgId: string) {
       body: `${myName} wants to join`,
       link: `/orgs/${org.slug}`,
     })));
-    // Also send to org contact email if set
-    const joinSvc = createServiceClient();
-    const { data: orgData } = await joinSvc.from("orgs").select("contact_email").eq("id", orgId).single();
-    const contactEmail = (orgData as unknown as { contact_email?: string | null } | null)?.contact_email;
-    if (contactEmail) {
-      const tmpl = orgIncomingJoinRequestEmail({
-        orgName: org.name,
-        requesterName: me?.full_name ?? user.email ?? "Someone",
-        requesterEmail: me?.email ?? user.email ?? "",
-        orgPath: `/orgs/${org.slug}`,
-      });
-      await sendEmail({ to: contactEmail, ...tmpl });
-    }
   }
 
   revalidatePath("/orgs");
@@ -224,7 +211,7 @@ export async function promoteMember(orgId: string, userId: string) {
 export async function updateOrg(
   orgId: string,
   orgSlug: string,
-  data: { name: string; description: string; tags: string[]; contactEmail?: string; websiteUrl?: string; tiktokUrl?: string; instagramUrl?: string }
+  data: { name: string; description: string; tags: string[]; contactEmail?: string; websiteUrl?: string; tiktokUrl?: string; instagramUrl?: string; groupmeUrl?: string; flareUrl?: string; socialLinksLocked?: boolean }
 ) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -247,6 +234,9 @@ export async function updateOrg(
       website_url: data.websiteUrl || null,
       tiktok_url: data.tiktokUrl || null,
       instagram_url: data.instagramUrl || null,
+      groupme_url: data.groupmeUrl || null,
+      flare_url: data.flareUrl || null,
+      social_links_locked: data.socialLinksLocked ?? false,
     })
     .eq("id", orgId);
 
@@ -502,6 +492,11 @@ export async function approveOrg(orgId: string) {
     .select("user_id").eq("org_id", orgId).eq("role", "director").eq("status", "active").limit(1).single();
   if (founder && org) {
     await notify([{ userId: founder.user_id, type: "org_member_request", title: `Your org "${org.name}" has been approved!`, link: `/orgs/${org.slug}` }]);
+    const { data: founderUser } = await svc.from("users").select("email, full_name").eq("id", founder.user_id).single();
+    if (founderUser?.email) {
+      const tmpl = orgCreationDecisionEmail({ recipientName: founderUser.full_name ?? founderUser.email.split("@")[0], orgName: org.name, approved: true, orgPath: `/orgs/${org.slug}` });
+      await sendEmail({ to: founderUser.email, ...tmpl });
+    }
   }
 
   revalidatePath("/bulletin/admin");
@@ -525,6 +520,11 @@ export async function rejectOrg(orgId: string, reason: string) {
     .select("user_id").eq("org_id", orgId).eq("role", "director").eq("status", "active").limit(1).single();
   if (founder && org) {
     await notify([{ userId: founder.user_id, type: "org_member_request", title: `Org request for "${org.name}" was declined`, body: reason || undefined }]);
+    const { data: founderUser } = await svc.from("users").select("email, full_name").eq("id", founder.user_id).single();
+    if (founderUser?.email) {
+      const tmpl = orgCreationDecisionEmail({ recipientName: founderUser.full_name ?? founderUser.email.split("@")[0], orgName: org.name, approved: false, reason: reason || null });
+      await sendEmail({ to: founderUser.email, ...tmpl });
+    }
   }
 
   revalidatePath("/bulletin/admin");
@@ -603,4 +603,46 @@ export async function acceptInvite(code: string) {
   revalidatePath(`/orgs/${orgSlug}`);
   revalidatePath("/dashboard");
   return { ok: true as const, orgSlug };
+}
+
+export async function stepDownFromRole(orgId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not signed in" };
+
+  const { data: mem } = await supabase.from("org_members")
+    .select("role").eq("org_id", orgId).eq("user_id", user.id).eq("status", "active").maybeSingle();
+  if (!mem || !["director", "officer"].includes(mem.role)) {
+    return { ok: false as const, error: "You don't have a staff role to step down from." };
+  }
+
+  const svc = createServiceClient();
+  const { error } = await svc.from("org_members")
+    .update({ role: "member" })
+    .eq("org_id", orgId).eq("user_id", user.id).eq("status", "active");
+
+  if (error) return { ok: false as const, error: error.message };
+
+  revalidatePath("/orgs");
+  revalidatePath("/dashboard");
+  return { ok: true as const };
+}
+
+export async function setFeaturedOrg(orgId: string | null) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not signed in" };
+
+  const { data: profile } = await supabase.from("users").select("is_site_admin").eq("id", user.id).single();
+  if (!profile?.is_site_admin) return { ok: false as const, error: "Not authorized." };
+
+  const svc = createServiceClient();
+  await svc.from("orgs").update({ is_featured: false }).eq("is_featured", true);
+  if (orgId) {
+    await svc.from("orgs").update({ is_featured: true }).eq("id", orgId);
+  }
+
+  revalidatePath("/dashboard");
+  revalidatePath("/bulletin/admin");
+  return { ok: true as const };
 }

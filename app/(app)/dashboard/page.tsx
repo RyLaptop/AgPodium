@@ -15,7 +15,7 @@ export default async function DashboardPage() {
 
   const svc = createServiceClient();
 
-  const [{ data: memberships }, { data: bulletinPosts }] = await Promise.all([
+  const [{ data: memberships }, { data: bulletinPosts }, { data: featuredOrg }] = await Promise.all([
     user
       ? supabase
           .from("org_members")
@@ -30,6 +30,11 @@ export default async function DashboardPage() {
       .gte("event_at", new Date().toISOString())
       .order("event_at", { ascending: true })
       .limit(10),
+    svc
+      .from("orgs")
+      .select("id, slug, name, description, logo_url")
+      .eq("is_featured", true)
+      .maybeSingle(),
   ]);
 
   const orgCount = memberships?.length ?? 0;
@@ -53,6 +58,35 @@ export default async function DashboardPage() {
           {user ? `Signed in as ${user.email}.` : "Browse orgs, find meetings, and request speaking slots."}
         </p>
       </section>
+
+      {featuredOrg && (
+        <section>
+          <p className="text-xs font-semibold uppercase tracking-wide text-brand mb-2">⭐ Featured org this week</p>
+          <Link
+            href={`/orgs/${(featuredOrg as unknown as { slug: string }).slug}`}
+            className="block border-2 border-brand/30 rounded-xl p-4 hover:border-brand hover:shadow transition"
+          >
+            <div className="flex items-start gap-3">
+              {(featuredOrg as unknown as { logo_url?: string | null }).logo_url && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={(featuredOrg as unknown as { logo_url: string }).logo_url}
+                  alt={(featuredOrg as unknown as { name: string }).name}
+                  className="w-12 h-12 rounded-full object-cover border border-gray-200 shrink-0"
+                />
+              )}
+              <div>
+                <h3 className="font-bold text-lg">{(featuredOrg as unknown as { name: string }).name}</h3>
+                {(featuredOrg as unknown as { description?: string | null }).description && (
+                  <p className="text-sm text-gray-600 mt-0.5 line-clamp-2">
+                    {(featuredOrg as unknown as { description: string }).description}
+                  </p>
+                )}
+              </div>
+            </div>
+          </Link>
+        </section>
+      )}
 
       {carouselPosts.length > 0 && (
         <section>

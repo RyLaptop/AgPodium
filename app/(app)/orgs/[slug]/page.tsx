@@ -27,7 +27,7 @@ export default async function OrgProfilePage({
   const svc = createServiceClient();
   const { data: org } = await svc
     .from("orgs")
-    .select("id, slug, name, description, created_at, tags, logo_url, status, contact_email, website_url, tiktok_url, instagram_url")
+    .select("id, slug, name, description, created_at, tags, logo_url, status, contact_email, website_url, tiktok_url, instagram_url, groupme_url, flare_url, social_links_locked")
     .eq("slug", slug)
     .single();
 
@@ -207,30 +207,44 @@ export default async function OrgProfilePage({
                 </div>
               )}
               {(() => {
-                const o = org as unknown as { website_url?: string | null; tiktok_url?: string | null; instagram_url?: string | null };
+                const o = org as unknown as { website_url?: string | null; tiktok_url?: string | null; instagram_url?: string | null; groupme_url?: string | null; flare_url?: string | null; social_links_locked?: boolean };
                 const ensureProtocol = (url: string) =>
                   /^https?:\/\//i.test(url) ? url : `https://${url}`;
-                const links = [
+                const publicLinks = [
                   o.website_url ? { href: ensureProtocol(o.website_url), label: "Website" } : null,
                   o.tiktok_url ? { href: ensureProtocol(o.tiktok_url), label: "TikTok" } : null,
                   o.instagram_url ? { href: ensureProtocol(o.instagram_url), label: "Instagram" } : null,
                 ].filter(Boolean) as { href: string; label: string }[];
-                return links.length > 0 ? (
-                  <div className="flex flex-wrap gap-3 mt-2">
-                    {links.map((l) => (
-                      <a key={l.label} href={l.href} target="_blank" rel="noopener noreferrer"
-                        className="text-xs text-brand hover:underline">
-                        {l.label} ↗
-                      </a>
-                    ))}
-                  </div>
-                ) : null;
+                const canSeeCommunity = !o.social_links_locked || isMember || isAdmin;
+                const communityLinks = canSeeCommunity ? [
+                  o.groupme_url ? { href: ensureProtocol(o.groupme_url), label: "GroupMe" } : null,
+                  o.flare_url ? { href: ensureProtocol(o.flare_url), label: "Flare" } : null,
+                ].filter(Boolean) as { href: string; label: string }[] : [];
+                const allLinks = [...publicLinks, ...communityLinks];
+                const showLockedHint = o.social_links_locked && !isMember && !isAdmin && (o.groupme_url || o.flare_url);
+                return (
+                  <>
+                    {allLinks.length > 0 && (
+                      <div className="flex flex-wrap gap-3 mt-2">
+                        {allLinks.map((l) => (
+                          <a key={l.label} href={l.href} target="_blank" rel="noopener noreferrer"
+                            className="text-xs text-brand hover:underline">
+                            {l.label} ↗
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                    {showLockedHint && (
+                      <p className="text-xs text-gray-400 mt-1">🔒 Join to see community chat links</p>
+                    )}
+                  </>
+                );
               })()}
             </div>
           </div>
 
           <div className="flex flex-row sm:flex-col gap-2 shrink-0">
-            <JoinLeaveButton orgId={org.id} isMember={isMember} isPending={isPending} isDirector={isDirector} />
+            <JoinLeaveButton orgId={org.id} isMember={isMember} isPending={isPending} isDirector={isDirector} myRole={myRole ?? null} />
             {canManage && (
               <AuthGatedLink
                 href={`/orgs/${org.slug}/meetings/new`}
@@ -255,6 +269,9 @@ export default async function OrgProfilePage({
               currentWebsiteUrl={(org as unknown as { website_url?: string | null }).website_url ?? null}
               currentTiktokUrl={(org as unknown as { tiktok_url?: string | null }).tiktok_url ?? null}
               currentInstagramUrl={(org as unknown as { instagram_url?: string | null }).instagram_url ?? null}
+              currentGroupmeUrl={(org as unknown as { groupme_url?: string | null }).groupme_url ?? null}
+              currentFlareUrl={(org as unknown as { flare_url?: string | null }).flare_url ?? null}
+              currentSocialLinksLocked={(org as unknown as { social_links_locked?: boolean }).social_links_locked ?? false}
             />
             <InviteLink orgId={org.id} orgSlug={org.slug} existingCode={existingInvite?.code ?? null} />
             <DeleteOrgButton orgId={org.id} orgName={org.name} />
