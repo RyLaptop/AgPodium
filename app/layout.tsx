@@ -12,7 +12,6 @@ export const metadata: Metadata = {
   title: "Unipodium — Student Org Speaker Platform",
   description:
     "Unipodium connects student speakers with college organizations. Browse campus orgs, request speaking slots, and manage your appearances — all in one place.",
-  icons: { icon: "/favicon.svg" },
 };
 
 const orgJsonLd = {
