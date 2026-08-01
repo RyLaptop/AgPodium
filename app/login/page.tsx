@@ -129,8 +129,32 @@ function LoginForm() {
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-700"
           >
             <option value="" disabled>Select your university</option>
-            <option value="tamu">Texas A&amp;M University</option>
+            <option value="alabama">University of Alabama</option>
+            <option value="arkansas">University of Arkansas</option>
+            <option value="baylor">Baylor University</option>
+            <option value="berkeley">UC Berkeley</option>
+            <option value="coloradost">Colorado State University</option>
+            <option value="loyola">Loyola University</option>
             <option value="lsu">Louisiana State University</option>
+            <option value="pepperdine">Pepperdine University</option>
+            <option value="rutgers">Rutgers University</option>
+            <option value="scu">Santa Clara University</option>
+            <option value="tamu">Texas A&amp;M University</option>
+            <option value="texastech">Texas Tech University</option>
+            <option value="txst">Texas State University</option>
+            <option value="tulane">Tulane University</option>
+            <option value="ucsd">UC San Diego</option>
+            <option value="ucsc">UC Santa Cruz</option>
+            <option value="uh">University of Houston</option>
+            <option value="ul">University of Louisiana</option>
+            <option value="ucla">UCLA</option>
+            <option value="umasslowell">UMass Lowell</option>
+            <option value="unco">University of Northern Colorado</option>
+            <option value="ut">University of Texas at Austin</option>
+            <option value="uta">UT Arlington</option>
+            <option value="utd">UT Dallas</option>
+            <option value="utsa">UT San Antonio</option>
+            <option value="wakeforest">Wake Forest University</option>
           </select>
           <p className="text-xs text-center text-gray-400">
             Don&apos;t see your university?{" "}
