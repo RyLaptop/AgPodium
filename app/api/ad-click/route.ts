@@ -13,6 +13,10 @@ export async function POST(request: NextRequest) {
   const variant = String(body.variant ?? "");
   const tier = TIER_MAP[variant] ?? "standard";
   const svc = createServiceClient();
-  await svc.from("ad_clicks").insert({ variant, tier });
+  const { error } = await svc.from("ad_clicks").insert({ variant, tier });
+  if (error) {
+    console.error("[ad-click]", error.message);
+    return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+  }
   return NextResponse.json({ ok: true });
 }
