@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { createServiceClient } from "@/lib/supabase/service";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://agpodium.com";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://unipodium.com";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const svc = createServiceClient();
