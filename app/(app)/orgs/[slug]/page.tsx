@@ -299,6 +299,12 @@ export default async function OrgProfilePage({
         <ActiveMembers orgId={org.id} members={activeMembersForDirector} currentUserId={user?.id} />
       )}
 
+      <div className="flex gap-4 text-sm">
+        <Link href={`/orgs/${org.slug}/gallery`} className="text-brand hover:underline font-medium">
+          Gallery →
+        </Link>
+      </div>
+
       <section>
         <h2 className="text-xl font-semibold mb-3">Upcoming meetings</h2>
         {!meetings || meetings.length === 0 ? (

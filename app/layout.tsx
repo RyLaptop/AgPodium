@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(APP_URL),
   title: "Unipodium — Student Org Speaker Platform",
   description:
-    "Unipodium connects student speakers with college organizations. Browse campus orgs, request speaking slots, and manage your appearances — all in one place.",
+    "Unipodium helps campus organizations communicate, collaborate, and coordinate — so student communities can work better together. Find orgs, request speaking slots, and stay connected with everything happening on campus.",
 };
 
 const orgJsonLd = {

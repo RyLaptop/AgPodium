@@ -7,6 +7,8 @@ import { UserList } from "./_user-list";
 import { PendingUsers } from "./_pending-users";
 import { TestEmailButton } from "./_test-email";
 import { FeaturedOrgPicker } from "./_featured-org";
+import { AdAnalytics } from "./_ad-analytics";
+import { UserAnalytics } from "./_user-analytics";
 import { getUniversity } from "@/lib/university";
 
 export const dynamic = "force-dynamic";
@@ -32,7 +34,15 @@ export default async function BulletinAdminPage() {
 
   const uni = await getUniversity();
   const admin = createServiceClient();
-  const [{ data: pendingPosts }, { data: pendingOrgs }, { data: allUsers }, { data: pendingAccounts }, { data: approvedOrgs }, authUsersResult] = await Promise.all([
+  const [
+    { data: pendingPosts },
+    { data: pendingOrgs },
+    { data: allUsers },
+    { data: pendingAccounts },
+    { data: approvedOrgs },
+    { data: adClicks },
+    authUsersResult,
+  ] = await Promise.all([
     admin.from("bulletin_posts")
       .select("id, event_title, event_description, event_at, event_location, created_at, users!bulletin_posts_submitter_id_fkey(full_name, email), orgs(name)")
       .eq("status", "pending")
@@ -55,6 +65,7 @@ export default async function BulletinAdminPage() {
       .select("id, name, is_featured")
       .eq("status", "approved")
       .order("name"),
+    admin.from("ad_clicks").select("tier, variant"),
     admin.auth.admin.listUsers({ perPage: 1000 }),
   ]);
 
@@ -97,6 +108,16 @@ export default async function BulletinAdminPage() {
         <h1 className="text-3xl font-bold">Admin</h1>
         <TestEmailButton />
       </div>
+
+      <section>
+        <h2 className="text-xl font-semibold mb-3">User analytics</h2>
+        <UserAnalytics users={usersList.map((u) => ({ created_at: u.created_at, last_sign_in_at: u.last_sign_in_at }))} />
+      </section>
+
+      <section>
+        <h2 className="text-xl font-semibold mb-3">Ad analytics</h2>
+        <AdAnalytics clicks={adClicks ?? []} />
+      </section>
 
       <section>
         <h2 className="text-xl font-semibold mb-3">Featured org of the week</h2>
