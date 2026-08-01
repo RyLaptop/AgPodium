@@ -257,7 +257,7 @@ export async function deleteMeeting(meetingId: string, orgSlug: string) {
     await svc.from("speak_requests").update({ status: "cancelled" })
       .eq("meeting_id", meetingId).in("status", ["pending", "approved"]);
     const { data: m } = await svc.from("meetings").select("title, orgs(name)").eq("id", meetingId).single();
-    const orgName = (m?.orgs as { name: string } | null)?.name ?? "";
+    const orgName = (m?.orgs as unknown as { name: string } | null)?.name ?? "";
     await notify(approvedSpeakers.map((s) => ({
       userId: s.requester_user_id,
       type: "request_update" as const,
@@ -293,7 +293,7 @@ export async function cancelMeeting(meetingId: string, orgSlug: string) {
   if (speakers && speakers.length > 0) {
     await svc.from("speak_requests").update({ status: "cancelled" })
       .eq("meeting_id", meetingId).in("status", ["pending", "approved", "waitlisted"]);
-    const orgName = (meeting.orgs as { name: string } | null)?.name ?? "";
+    const orgName = (meeting.orgs as unknown as { name: string } | null)?.name ?? "";
     await notify(speakers.map((s) => ({
       userId: s.requester_user_id,
       type: "request_update" as const,
@@ -330,7 +330,7 @@ export async function inviteCohost(meetingId: string, orgSlug: string, cohostOrg
 
   const { data: directors } = await svc.from("org_members").select("user_id")
     .eq("org_id", cohostOrgId).in("role", ["director", "officer"]).eq("status", "active");
-  const orgName = (meeting.orgs as { name: string } | null)?.name ?? "";
+  const orgName = (meeting.orgs as unknown as { name: string } | null)?.name ?? "";
   if (directors && directors.length > 0) {
     await notify(directors.map((d) => ({
       userId: d.user_id,
@@ -448,7 +448,7 @@ export async function deleteMeetingSeries(seriesId: string, orgSlug: string) {
       await svc.from("speak_requests").update({ status: "cancelled" })
         .in("meeting_id", meetingIds).in("status", ["pending", "approved", "waitlisted"]);
       const { data: m } = await svc.from("meetings").select("title, orgs(name)").eq("id", meetingIds[0]).single();
-      const orgName = (m?.orgs as { name: string } | null)?.name ?? "";
+      const orgName = (m?.orgs as unknown as { name: string } | null)?.name ?? "";
       await notify(speakers.map((s) => ({
         userId: s.requester_user_id,
         type: "request_update" as const,

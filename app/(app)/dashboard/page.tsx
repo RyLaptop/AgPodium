@@ -47,7 +47,7 @@ export default async function DashboardPage() {
     event_location: p.event_location ?? null,
     thumbnail_url: (p as unknown as { thumbnail_url: string | null }).thumbnail_url ?? null,
     is_university_post: (p as unknown as { is_university_post: boolean }).is_university_post ?? false,
-    org_name: (p.orgs as { name: string } | null)?.name ?? null,
+    org_name: (p.orgs as unknown as { name: string } | null)?.name ?? null,
   }));
 
   return (

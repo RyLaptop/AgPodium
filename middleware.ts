@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 
-const UNI_EXEMPT = ["/", "/login", "/signup", "/auth", "/invite", "/api"];
+const UNI_EXEMPT = ["/", "/login", "/signup", "/auth", "/invite", "/api", "/sitemap.xml", "/robots.txt"];
 
 export async function middleware(request: NextRequest) {
   const response = await updateSession(request);
