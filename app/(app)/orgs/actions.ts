@@ -261,6 +261,29 @@ export async function demoteMember(orgId: string, userId: string) {
   return { ok: true as const };
 }
 
+export async function demoteToOfficer(orgId: string, userId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not signed in" };
+
+  if (!await isDirectorOrAdmin(supabase, orgId, user.id)) {
+    return { ok: false as const, error: "Only directors can change roles." };
+  }
+
+  const svc = createServiceClient();
+  const { error } = await svc
+    .from("org_members")
+    .update({ role: "officer" })
+    .eq("org_id", orgId)
+    .eq("user_id", userId)
+    .eq("status", "active")
+    .eq("role", "director");
+
+  if (error) return { ok: false as const, error: error.message };
+  revalidatePath(`/orgs`);
+  return { ok: true as const };
+}
+
 export async function updateOrg(
   orgId: string,
   orgSlug: string,

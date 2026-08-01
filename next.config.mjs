@@ -8,7 +8,9 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   experimental: {
-    serverActionsBodySizeLimit: "8mb",
+    serverActions: {
+      bodySizeLimit: "8mb",
+    },
   },
 };
 

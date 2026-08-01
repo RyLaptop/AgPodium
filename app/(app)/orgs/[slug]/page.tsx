@@ -81,11 +81,6 @@ export default async function OrgProfilePage({
 
   const activeMembers = (members ?? []).filter((m) => m.status === "active");
   const pendingMembers = (members ?? []).filter((m) => m.status === "pending");
-
-  const staff = activeMembers
-    .filter((m) => m.role === "director")
-    .map((m) => m.users as unknown as { id: string; full_name: string | null; email: string });
-
   const memberCount = activeMembers.length;
   const isAdmin = profile?.is_site_admin ?? false;
   const myRole = myMembership?.role as "member" | "officer" | "director" | undefined;
@@ -185,17 +180,7 @@ export default async function OrgProfilePage({
                 <p className="text-gray-700 mt-2 max-w-2xl">{org.description}</p>
               )}
               <p className="text-sm text-gray-500 mt-2">
-                {memberCount} member{memberCount === 1 ? "" : "s"}
-                {staff.length > 0 && (
-                  <> · staff: {staff.map((d, i) => (
-                    <span key={d.id}>
-                      {i > 0 && ", "}
-                      <Link href={`/profile/${d.id}`} className="hover:text-brand hover:underline">
-                        {d.full_name ?? d.email.split("@")[0]}
-                      </Link>
-                    </span>
-                  ))}</>
-                )}
+                <strong>Members:</strong> {memberCount}
               </p>
               {tags.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mt-2">
@@ -279,6 +264,33 @@ export default async function OrgProfilePage({
         )}
       </div>
 
+      <div className="flex flex-wrap gap-2">
+        <Link href={`/orgs/${org.slug}/gallery`}
+          className="px-4 py-2 rounded-lg border border-gray-200 bg-white hover:bg-brand hover:text-white hover:border-brand text-sm font-medium transition-colors">
+          Gallery
+        </Link>
+        <Link href={`/orgs/${org.slug}/surveys`}
+          className="px-4 py-2 rounded-lg border border-gray-200 bg-white hover:bg-brand hover:text-white hover:border-brand text-sm font-medium transition-colors">
+          Surveys
+        </Link>
+        {isMember && (
+          <>
+            <Link href={`/orgs/${org.slug}/checklist`}
+              className="px-4 py-2 rounded-lg border border-gray-200 bg-white hover:bg-brand hover:text-white hover:border-brand text-sm font-medium transition-colors">
+              New Member Checklist
+            </Link>
+            <Link href={`/orgs/${org.slug}/awards`}
+              className="px-4 py-2 rounded-lg border border-gray-200 bg-white hover:bg-brand hover:text-white hover:border-brand text-sm font-medium transition-colors">
+              Awards
+            </Link>
+          </>
+        )}
+        <Link href={`/orgs/${org.slug}/report`}
+          className="px-4 py-2 rounded-lg border border-gray-200 bg-white hover:bg-brand hover:text-white hover:border-brand text-sm font-medium transition-colors">
+          Anonymous Report
+        </Link>
+      </div>
+
       <Affiliations
         orgId={org.id}
         orgSlug={org.slug}
@@ -298,28 +310,6 @@ export default async function OrgProfilePage({
       {activeMembersForDirector.length > 0 && (
         <ActiveMembers orgId={org.id} members={activeMembersForDirector} currentUserId={user?.id} />
       )}
-
-      <div className="flex flex-wrap gap-4 text-sm">
-        <Link href={`/orgs/${org.slug}/gallery`} className="text-brand hover:underline font-medium">
-          Gallery →
-        </Link>
-        <Link href={`/orgs/${org.slug}/surveys`} className="text-brand hover:underline font-medium">
-          Surveys →
-        </Link>
-        {isMember && (
-          <>
-            <Link href={`/orgs/${org.slug}/checklist`} className="text-brand hover:underline font-medium">
-              Checklist →
-            </Link>
-            <Link href={`/orgs/${org.slug}/awards`} className="text-brand hover:underline font-medium">
-              Awards →
-            </Link>
-          </>
-        )}
-        <Link href={`/orgs/${org.slug}/report`} className="text-brand hover:underline font-medium">
-          Report →
-        </Link>
-      </div>
 
       <section>
         <h2 className="text-xl font-semibold mb-3">Upcoming meetings</h2>

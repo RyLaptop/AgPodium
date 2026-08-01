@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { makeOfficer, promoteMember, demoteMember, removeMember, setMemberTitle } from "../actions";
+import { makeOfficer, promoteMember, demoteMember, demoteToOfficer, removeMember, setMemberTitle } from "../actions";
 
 type ActiveMember = {
   user_id: string;
@@ -22,16 +22,26 @@ export function ActiveMembers({
   members: ActiveMember[];
   currentUserId?: string;
 }) {
+  const [collapsed, setCollapsed] = useState(false);
+
   if (members.length === 0) return null;
 
   return (
     <section>
-      <h2 className="text-xl font-semibold mb-3">Members</h2>
-      <ul className="space-y-2">
-        {members.map((m) => (
-          <MemberRow key={m.user_id} orgId={orgId} member={m} isSelf={m.user_id === currentUserId} />
-        ))}
-      </ul>
+      <button
+        onClick={() => setCollapsed((v) => !v)}
+        className="flex items-center gap-2 text-xl font-semibold mb-3 hover:text-brand transition-colors"
+      >
+        <span>{collapsed ? "▶" : "▼"}</span>
+        Members
+      </button>
+      {!collapsed && (
+        <ul className="space-y-2">
+          {members.map((m) => (
+            <MemberRow key={m.user_id} orgId={orgId} member={m} isSelf={m.user_id === currentUserId} />
+          ))}
+        </ul>
+      )}
     </section>
   );
 }
@@ -53,6 +63,15 @@ function MemberRow({ orgId, member, isSelf }: { orgId: string; member: ActiveMem
   const promote = () => {
     startTransition(async () => {
       const res = await promoteMember(orgId, member.user_id);
+      if (!res.ok) alert(res.error);
+      else router.refresh();
+    });
+  };
+
+  const demoteToStaff = () => {
+    if (!confirm(`Demote ${member.full_name ?? member.email.split("@")[0]} from Director to Staff?`)) return;
+    startTransition(async () => {
+      const res = await demoteToOfficer(orgId, member.user_id);
       if (!res.ok) alert(res.error);
       else router.refresh();
     });
@@ -114,22 +133,28 @@ function MemberRow({ orgId, member, isSelf }: { orgId: string; member: ActiveMem
           >
             🏷️
           </button>
+          {member.role === "director" && (
+            <button onClick={demoteToStaff} disabled={pending}
+              className="text-xs px-2.5 py-1 border border-orange-200 text-orange-600 rounded-lg hover:bg-orange-50 disabled:opacity-60">
+              Demote to Staff
+            </button>
+          )}
           {member.role === "officer" && (
             <>
               <button onClick={promote} disabled={pending}
                 className="text-xs px-2.5 py-1 border border-brand/30 text-brand rounded-lg hover:bg-brand/5 disabled:opacity-60">
-                Make STAFF
+                Make Director
               </button>
               <button onClick={demote} disabled={pending}
                 className="text-xs px-2.5 py-1 border border-orange-200 text-orange-600 rounded-lg hover:bg-orange-50 disabled:opacity-60">
-                Remove officer
+                Remove Staff
               </button>
             </>
           )}
           {member.role === "member" && (
             <button onClick={makeOff} disabled={pending}
               className="text-xs px-2.5 py-1 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-60">
-              Make Officer
+              Make Staff
             </button>
           )}
           {member.role !== "director" && !isSelf && (
