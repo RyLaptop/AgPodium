@@ -5,37 +5,46 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { isOrgStaff } from "@/lib/auth/org-access";
 
-export async function createOrgPost(orgId: string, orgSlug: string, formData: FormData) {
+export async function getUploadUrl(orgId: string, fileName: string, contentType: string) {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { ok: false as const, error: "Not signed in." };
     if (!await isOrgStaff(supabase, orgId, user.id)) return { ok: false as const, error: "Only staff can post." };
 
-    const caption = String(formData.get("caption") ?? "").trim();
-    const file = formData.get("image") as File | null;
+    const ext = fileName.split(".").pop()?.toLowerCase() ?? "jpg";
+    const path = `${orgId}/${Date.now()}.${ext}`;
 
-    if (!caption && (!file || file.size === 0)) return { ok: false as const, error: "Add a caption or image." };
+    const svc = createServiceClient();
+    const { data, error } = await svc.storage.from("org-posts").createSignedUploadUrl(path);
+    if (error) return { ok: false as const, error: error.message };
+
+    return { ok: true as const, signedUrl: data.signedUrl, path };
+  } catch (err) {
+    return { ok: false as const, error: err instanceof Error ? err.message : "Failed to prepare upload." };
+  }
+}
+
+export async function createOrgPost(orgId: string, orgSlug: string, caption: string, imagePath: string | null) {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { ok: false as const, error: "Not signed in." };
+    if (!await isOrgStaff(supabase, orgId, user.id)) return { ok: false as const, error: "Only staff can post." };
+
+    if (!caption.trim() && !imagePath) return { ok: false as const, error: "Add a caption or image." };
 
     const svc = createServiceClient();
     let imageUrl: string | null = null;
-
-    if (file && file.size > 0) {
-      if (!file.type.startsWith("image/")) return { ok: false as const, error: "File must be an image." };
-      if (file.size > 5 * 1024 * 1024) return { ok: false as const, error: "Image must be under 5MB." };
-      const ext = file.name.split(".").pop() ?? "jpg";
-      const path = `${orgId}/${Date.now()}.${ext}`;
-      const bytes = await file.arrayBuffer();
-      const { error: upErr } = await svc.storage.from("org-posts").upload(path, bytes, { contentType: file.type });
-      if (upErr) return { ok: false as const, error: `Upload failed: ${upErr.message}` };
-      const { data: { publicUrl } } = svc.storage.from("org-posts").getPublicUrl(path);
+    if (imagePath) {
+      const { data: { publicUrl } } = svc.storage.from("org-posts").getPublicUrl(imagePath);
       imageUrl = publicUrl;
     }
 
     const { error } = await svc.from("org_posts").insert({
       org_id: orgId,
       author_id: user.id,
-      caption: caption || null,
+      caption: caption.trim() || null,
       image_url: imageUrl,
     });
     if (error) return { ok: false as const, error: error.message };
