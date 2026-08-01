@@ -16,10 +16,14 @@ export default async function AwardsPage({ params }: { params: Promise<{ slug: s
   const { data: org } = await svc.from("orgs").select("id, name, slug, status").eq("slug", slug).single();
   if (!org || org.status !== "approved") notFound();
 
-  const { data: myMembership } = await supabase.from("org_members").select("role, status").eq("org_id", org.id).eq("user_id", user.id).maybeSingle();
-  if (myMembership?.status !== "active") notFound();
+  const [{ data: myMembership }, { data: profile }] = await Promise.all([
+    supabase.from("org_members").select("role, status").eq("org_id", org.id).eq("user_id", user.id).maybeSingle(),
+    supabase.from("users").select("is_site_admin").eq("id", user.id).single(),
+  ]);
+  const isAdmin = profile?.is_site_admin ?? false;
+  if (myMembership?.status !== "active" && !isAdmin) notFound();
 
-  const isStaff = myMembership.role === "director" || myMembership.role === "officer";
+  const isStaff = isAdmin || myMembership?.role === "director" || myMembership?.role === "officer";
 
   const [{ data: awardRows }, { data: memberAwardRows }, { data: memberRows }] = await Promise.all([
     svc.from("org_awards").select("id, name, description, created_at").eq("org_id", org.id).order("created_at"),

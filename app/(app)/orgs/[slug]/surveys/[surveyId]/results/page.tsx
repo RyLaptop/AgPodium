@@ -15,8 +15,12 @@ export default async function SurveyResultsPage({ params }: { params: Promise<{ 
   const { data: org } = await svc.from("orgs").select("id, name, slug, status").eq("slug", slug).single();
   if (!org || org.status !== "approved") notFound();
 
-  const { data: myMembership } = await supabase.from("org_members").select("role, status").eq("org_id", org.id).eq("user_id", user.id).maybeSingle();
-  if (myMembership?.status !== "active" || !["director", "officer"].includes(myMembership.role)) notFound();
+  const [{ data: myMembership }, { data: profile }] = await Promise.all([
+    supabase.from("org_members").select("role, status").eq("org_id", org.id).eq("user_id", user.id).maybeSingle(),
+    supabase.from("users").select("is_site_admin").eq("id", user.id).single(),
+  ]);
+  const isAdmin = profile?.is_site_admin ?? false;
+  if (!isAdmin && (myMembership?.status !== "active" || !["director", "officer"].includes(myMembership.role))) notFound();
 
   const { data: survey } = await svc.from("org_surveys").select("id, title, org_id").eq("id", surveyId).single();
   if (!survey || survey.org_id !== org.id) notFound();

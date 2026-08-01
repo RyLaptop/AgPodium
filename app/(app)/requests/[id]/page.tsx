@@ -66,17 +66,19 @@ export default async function RequestDetailPage({
     .map((r) => r.orgs as unknown as { name: string; slug: string } | null)
     .filter(Boolean) as { name: string; slug: string }[];
 
-  const { data: myMembership } = user
-    ? await supabase
-        .from("org_members")
-        .select("role")
-        .eq("org_id", meeting.org_id)
-        .eq("user_id", user.id)
-        .maybeSingle()
-    : { data: null };
+  const [myMembershipResult, profileResult] = await Promise.all([
+    user
+      ? supabase.from("org_members").select("role").eq("org_id", meeting.org_id).eq("user_id", user.id).maybeSingle()
+      : Promise.resolve({ data: null }),
+    user
+      ? supabase.from("users").select("is_site_admin").eq("id", user.id).single()
+      : Promise.resolve({ data: null }),
+  ]);
+  const myMembership = myMembershipResult.data;
+  const isAdmin = (profileResult.data as { is_site_admin?: boolean } | null)?.is_site_admin ?? false;
 
   const isOfficer =
-    myMembership?.role === "officer" || myMembership?.role === "director";
+    isAdmin || myMembership?.role === "officer" || myMembership?.role === "director";
 
   const meetingInPast = new Date(meeting.starts_at) < new Date();
   const meetingPastOneDay = new Date(meeting.starts_at).getTime() + 24 * 60 * 60 * 1000 < Date.now();

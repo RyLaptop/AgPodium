@@ -3,23 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
-
-async function isActiveStaff(supabase: Awaited<ReturnType<typeof createClient>>, orgId: string, userId: string) {
-  const { data } = await supabase
-    .from("org_members")
-    .select("role")
-    .eq("org_id", orgId)
-    .eq("user_id", userId)
-    .eq("status", "active")
-    .single();
-  return data?.role === "director" || data?.role === "officer";
-}
+import { isOrgStaff } from "@/lib/auth/org-access";
 
 export async function createOrgPost(orgId: string, orgSlug: string, formData: FormData) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false as const, error: "Not signed in." };
-  if (!await isActiveStaff(supabase, orgId, user.id)) return { ok: false as const, error: "Only staff can post." };
+  if (!await isOrgStaff(supabase, orgId, user.id)) return { ok: false as const, error: "Only staff can post." };
 
   const caption = String(formData.get("caption") ?? "").trim();
   const file = formData.get("image") as File | null;
@@ -63,7 +53,7 @@ export async function deleteOrgPost(postId: string, orgId: string, orgSlug: stri
   if (!post) return { ok: false as const, error: "Post not found." };
 
   const isAuthor = post.author_id === user.id;
-  const isStaff = await isActiveStaff(supabase, orgId, user.id);
+  const isStaff = await isOrgStaff(supabase, orgId, user.id);
   if (!isAuthor && !isStaff) return { ok: false as const, error: "Not authorized." };
 
   if (post.image_url) {

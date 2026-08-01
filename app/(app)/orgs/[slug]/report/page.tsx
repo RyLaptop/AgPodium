@@ -15,12 +15,15 @@ export default async function ReportPage({ params }: { params: Promise<{ slug: s
   const { data: org } = await svc.from("orgs").select("id, name, slug, status").eq("slug", slug).single();
   if (!org || org.status !== "approved") notFound();
 
-  const { data: myMembership } = user
-    ? await supabase.from("org_members").select("role, status").eq("org_id", org.id).eq("user_id", user.id).maybeSingle()
-    : { data: null };
+  const [myMembershipResult, profileResult] = await Promise.all([
+    user ? supabase.from("org_members").select("role, status").eq("org_id", org.id).eq("user_id", user.id).maybeSingle() : Promise.resolve({ data: null }),
+    user ? supabase.from("users").select("is_site_admin").eq("id", user.id).single() : Promise.resolve({ data: null }),
+  ]);
+  const myMembership = myMembershipResult.data;
+  const isAdmin = (profileResult.data as { is_site_admin?: boolean } | null)?.is_site_admin ?? false;
 
-  const isStaff = myMembership?.status === "active" &&
-    (myMembership.role === "director" || myMembership.role === "officer");
+  const isStaff = isAdmin || (myMembership?.status === "active" &&
+    (myMembership.role === "director" || myMembership.role === "officer"));
 
   let reports: { id: string; content: string; created_at: string }[] = [];
   if (isStaff) {

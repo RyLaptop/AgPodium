@@ -3,18 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
-
-async function isActiveStaff(supabase: Awaited<ReturnType<typeof createClient>>, orgId: string, userId: string) {
-  const { data } = await supabase.from("org_members").select("role")
-    .eq("org_id", orgId).eq("user_id", userId).eq("status", "active").single();
-  return data?.role === "director" || data?.role === "officer";
-}
+import { isOrgStaff } from "@/lib/auth/org-access";
 
 export async function createAward(orgId: string, orgSlug: string, name: string, description: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false as const, error: "Not signed in." };
-  if (!await isActiveStaff(supabase, orgId, user.id)) return { ok: false as const, error: "Only staff can create awards." };
+  if (!await isOrgStaff(supabase, orgId, user.id)) return { ok: false as const, error: "Only staff can create awards." };
   if (!name.trim()) return { ok: false as const, error: "Award name required." };
 
   const svc = createServiceClient();
@@ -30,7 +25,7 @@ export async function deleteAward(awardId: string, orgId: string, orgSlug: strin
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false as const, error: "Not signed in." };
-  if (!await isActiveStaff(supabase, orgId, user.id)) return { ok: false as const, error: "Only staff can delete awards." };
+  if (!await isOrgStaff(supabase, orgId, user.id)) return { ok: false as const, error: "Only staff can delete awards." };
 
   const svc = createServiceClient();
   await svc.from("member_awards").delete().eq("award_id", awardId);
@@ -43,7 +38,7 @@ export async function assignAward(awardId: string, targetUserId: string, orgId: 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false as const, error: "Not signed in." };
-  if (!await isActiveStaff(supabase, orgId, user.id)) return { ok: false as const, error: "Only staff can assign awards." };
+  if (!await isOrgStaff(supabase, orgId, user.id)) return { ok: false as const, error: "Only staff can assign awards." };
 
   const svc = createServiceClient();
   const { error } = await svc.from("member_awards").insert({
@@ -58,7 +53,7 @@ export async function revokeAward(memberAwardId: string, orgId: string, orgSlug:
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false as const, error: "Not signed in." };
-  if (!await isActiveStaff(supabase, orgId, user.id)) return { ok: false as const, error: "Only staff can revoke awards." };
+  if (!await isOrgStaff(supabase, orgId, user.id)) return { ok: false as const, error: "Only staff can revoke awards." };
 
   const svc = createServiceClient();
   await svc.from("member_awards").delete().eq("id", memberAwardId).eq("org_id", orgId);

@@ -39,18 +39,19 @@ export default async function MeetingPage({
 
   const org = meeting.orgs as unknown as { name: string; slug: string };
 
-  const { data: myMembership } = user
-    ? await supabase
-        .from("org_members")
-        .select("role, status")
-        .eq("org_id", meeting.org_id)
-        .eq("user_id", user.id)
-        .eq("status", "active")
-        .maybeSingle()
-    : { data: null };
+  const [myMembershipResult, profileResult] = await Promise.all([
+    user
+      ? supabase.from("org_members").select("role, status").eq("org_id", meeting.org_id).eq("user_id", user.id).eq("status", "active").maybeSingle()
+      : Promise.resolve({ data: null }),
+    user
+      ? supabase.from("users").select("is_site_admin").eq("id", user.id).single()
+      : Promise.resolve({ data: null }),
+  ]);
+  const myMembership = myMembershipResult.data;
+  const isAdmin = (profileResult.data as { is_site_admin?: boolean } | null)?.is_site_admin ?? false;
 
   const isOfficer =
-    myMembership?.role === "officer" || myMembership?.role === "director";
+    isAdmin || myMembership?.role === "officer" || myMembership?.role === "director";
   const isCancelled = !!(meeting as unknown as { cancelled_at: string | null }).cancelled_at;
 
   const [{ data: approvedSpeakers }, { data: incoming }, { data: myOrgs }, { data: cohostRows }, { data: allOrgs }] =

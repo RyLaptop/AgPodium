@@ -3,12 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
-
-async function isActiveStaff(supabase: Awaited<ReturnType<typeof createClient>>, orgId: string, userId: string) {
-  const { data } = await supabase.from("org_members").select("role")
-    .eq("org_id", orgId).eq("user_id", userId).eq("status", "active").single();
-  return data?.role === "director" || data?.role === "officer";
-}
+import { isOrgStaff } from "@/lib/auth/org-access";
 
 export type Question = { text: string; type: "text" | "multiple_choice" | "checkbox"; options: string[] };
 
@@ -16,7 +11,7 @@ export async function createSurvey(orgId: string, orgSlug: string, title: string
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false as const, error: "Not signed in." };
-  if (!await isActiveStaff(supabase, orgId, user.id)) return { ok: false as const, error: "Only staff can create surveys." };
+  if (!await isOrgStaff(supabase, orgId, user.id)) return { ok: false as const, error: "Only staff can create surveys." };
   if (!title.trim()) return { ok: false as const, error: "Title required." };
   if (questions.length === 0) return { ok: false as const, error: "Add at least one question." };
 
@@ -41,7 +36,7 @@ export async function deleteSurvey(surveyId: string, orgId: string, orgSlug: str
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false as const, error: "Not signed in." };
-  if (!await isActiveStaff(supabase, orgId, user.id)) return { ok: false as const, error: "Only staff can delete surveys." };
+  if (!await isOrgStaff(supabase, orgId, user.id)) return { ok: false as const, error: "Only staff can delete surveys." };
   const svc = createServiceClient();
   const { error } = await svc.from("org_surveys").delete().eq("id", surveyId).eq("org_id", orgId);
   if (error) return { ok: false as const, error: error.message };

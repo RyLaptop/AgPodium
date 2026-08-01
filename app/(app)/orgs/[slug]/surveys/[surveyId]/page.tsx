@@ -18,13 +18,16 @@ export default async function SurveyPage({ params }: { params: Promise<{ slug: s
   const { data: survey } = await svc.from("org_surveys").select("id, title, description, is_public, org_id").eq("id", surveyId).single();
   if (!survey || survey.org_id !== org.id) notFound();
 
-  const { data: myMembership } = user
-    ? await supabase.from("org_members").select("role, status").eq("org_id", org.id).eq("user_id", user.id).maybeSingle()
-    : { data: null };
+  const [myMembershipResult, profileResult] = await Promise.all([
+    user ? supabase.from("org_members").select("role, status").eq("org_id", org.id).eq("user_id", user.id).maybeSingle() : Promise.resolve({ data: null }),
+    user ? supabase.from("users").select("is_site_admin").eq("id", user.id).single() : Promise.resolve({ data: null }),
+  ]);
+  const myMembership = myMembershipResult.data;
+  const isAdmin = (profileResult.data as { is_site_admin?: boolean } | null)?.is_site_admin ?? false;
 
   const isMember = myMembership?.status === "active";
-  const isStaff = isMember && (myMembership?.role === "director" || myMembership?.role === "officer");
-  if (!survey.is_public && !isMember) notFound();
+  const isStaff = isAdmin || (isMember && (myMembership?.role === "director" || myMembership?.role === "officer"));
+  if (!survey.is_public && !isMember && !isAdmin) notFound();
 
   const { data: questions } = await svc.from("survey_questions").select("id, question_text, question_type, options").eq("survey_id", surveyId).order("sort_order");
 

@@ -3,12 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
-
-async function isActiveStaff(supabase: Awaited<ReturnType<typeof createClient>>, orgId: string, userId: string) {
-  const { data } = await supabase.from("org_members").select("role")
-    .eq("org_id", orgId).eq("user_id", userId).eq("status", "active").single();
-  return data?.role === "director" || data?.role === "officer";
-}
+import { isOrgStaff } from "@/lib/auth/org-access";
 
 async function getOrCreateChecklist(svc: ReturnType<typeof createServiceClient>, orgId: string) {
   const { data: existing } = await svc.from("onboarding_checklists").select("id").eq("org_id", orgId).maybeSingle();
@@ -21,7 +16,7 @@ export async function addChecklistItem(orgId: string, orgSlug: string, label: st
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false as const, error: "Not signed in." };
-  if (!await isActiveStaff(supabase, orgId, user.id)) return { ok: false as const, error: "Only staff can manage the checklist." };
+  if (!await isOrgStaff(supabase, orgId, user.id)) return { ok: false as const, error: "Only staff can manage the checklist." };
   if (!label.trim()) return { ok: false as const, error: "Label required." };
 
   const svc = createServiceClient();
@@ -41,7 +36,7 @@ export async function deleteChecklistItem(itemId: string, orgId: string, orgSlug
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false as const, error: "Not signed in." };
-  if (!await isActiveStaff(supabase, orgId, user.id)) return { ok: false as const, error: "Only staff can manage the checklist." };
+  if (!await isOrgStaff(supabase, orgId, user.id)) return { ok: false as const, error: "Only staff can manage the checklist." };
   const svc = createServiceClient();
   await svc.from("onboarding_items").delete().eq("id", itemId);
   revalidatePath(`/orgs/${orgSlug}/checklist`);
@@ -52,7 +47,7 @@ export async function toggleCompletion(itemId: string, targetUserId: string, org
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false as const, error: "Not signed in." };
-  if (!await isActiveStaff(supabase, orgId, user.id)) return { ok: false as const, error: "Only staff can mark completions." };
+  if (!await isOrgStaff(supabase, orgId, user.id)) return { ok: false as const, error: "Only staff can mark completions." };
   const svc = createServiceClient();
   if (completed) {
     const { error } = await svc.from("member_checklist_completions").insert({ org_id: orgId, user_id: targetUserId, item_id: itemId, checked_by: user.id });
