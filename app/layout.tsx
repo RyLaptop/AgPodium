@@ -5,10 +5,22 @@ import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://unipodium.com";
+
 export const metadata: Metadata = {
-  title: "UniPodium",
-  description: "Cross-campus speaker platform for student orgs.",
+  metadataBase: new URL(APP_URL),
+  title: "Unipodium — Student Org Speaker Platform",
+  description:
+    "Unipodium connects student speakers with college organizations. Browse campus orgs, request speaking slots, and manage your appearances — all in one place.",
   icons: { icon: "/favicon.svg" },
+};
+
+const orgJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "Unipodium",
+  url: "https://unipodium.com",
+  logo: "https://unipodium.com/icon.svg",
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
@@ -17,7 +29,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   return (
     <html lang="en" className={inter.variable} data-uni={uni}>
-      <body>{children}</body>
+      <body>
+        {children}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
+        />
+      </body>
     </html>
   );
 }
