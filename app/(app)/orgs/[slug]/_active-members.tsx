@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { promoteMember, removeMember, setMemberTitle } from "../actions";
+import { promoteMember, demoteMember, removeMember, setMemberTitle } from "../actions";
 
 type ActiveMember = {
   user_id: string;
@@ -45,6 +45,15 @@ function MemberRow({ orgId, member, isSelf }: { orgId: string; member: ActiveMem
   const promote = () => {
     startTransition(async () => {
       const res = await promoteMember(orgId, member.user_id);
+      if (!res.ok) alert(res.error);
+      else router.refresh();
+    });
+  };
+
+  const demote = () => {
+    if (!confirm(`Remove staff status from ${member.full_name ?? member.email.split("@")[0]}? They'll become a regular member.`)) return;
+    startTransition(async () => {
+      const res = await demoteMember(orgId, member.user_id);
       if (!res.ok) alert(res.error);
       else router.refresh();
     });
@@ -97,7 +106,13 @@ function MemberRow({ orgId, member, isSelf }: { orgId: string; member: ActiveMem
           >
             🏷️
           </button>
-          {member.role !== "director" && (
+          {member.role === "officer" && (
+            <button onClick={demote} disabled={pending}
+              className="text-xs px-2.5 py-1 border border-orange-200 text-orange-600 rounded-lg hover:bg-orange-50 disabled:opacity-60">
+              Remove staff
+            </button>
+          )}
+          {member.role === "member" && (
             <button onClick={promote} disabled={pending}
               className="text-xs px-2.5 py-1 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-60">
               Make STAFF

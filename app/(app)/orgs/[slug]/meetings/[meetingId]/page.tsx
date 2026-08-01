@@ -9,6 +9,7 @@ import { EditMeeting } from "./_edit-meeting";
 import { SpeakerManage } from "./_speaker-manage";
 import { StaffChat } from "./_staff-chat";
 import { CohostPanel } from "./_cohost";
+import { RsvpButton } from "./_rsvp";
 import type { ChatMessage, ChatUser } from "@/app/(app)/requests/[id]/_chat";
 
 export const dynamic = "force-dynamic";
@@ -29,7 +30,7 @@ export default async function MeetingPage({
   const { data: meeting } = await svc
     .from("meetings")
     .select(
-      "id, title, agenda, location, starts_at, ends_at, slots_open, slot_length_minutes, org_id, cancelled_at, series_id, orgs(name, slug)"
+      "id, title, agenda, location, starts_at, ends_at, slots_open, slot_length_minutes, org_id, cancelled_at, series_id, is_paid, ticket_url, rsvp_enabled, orgs(name, slug)"
     )
     .eq("id", meetingId)
     .single();
@@ -89,6 +90,24 @@ export default async function MeetingPage({
   const usedSlots = approvedSpeakers?.length ?? 0;
   const slotsRemaining = Math.max(0, meeting.slots_open - usedSlots);
   const inFuture = new Date(meeting.starts_at) > new Date();
+
+  const isPaid = (meeting as unknown as { is_paid: boolean }).is_paid;
+  const ticketUrl = (meeting as unknown as { ticket_url: string | null }).ticket_url;
+  const rsvpEnabled = (meeting as unknown as { rsvp_enabled: boolean }).rsvp_enabled;
+
+  const [{ data: rsvpRows }, { data: myRsvp }] = await Promise.all([
+    svc.from("meeting_rsvps").select("id").eq("meeting_id", meetingId),
+    user ? supabase.from("meeting_rsvps").select("id").eq("meeting_id", meetingId).eq("user_id", user.id).maybeSingle() : Promise.resolve({ data: null }),
+  ]);
+  const rsvpCount = rsvpRows?.length ?? 0;
+  const hasRsvp = !!myRsvp;
+
+  // Google Calendar link
+  const gcalStart = new Date(meeting.starts_at).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  const gcalEnd = meeting.ends_at
+    ? new Date(meeting.ends_at).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "")
+    : new Date(new Date(meeting.starts_at).getTime() + 3600000).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  const gcalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(meeting.title)}&dates=${gcalStart}/${gcalEnd}${meeting.location ? `&location=${encodeURIComponent(meeting.location)}` : ""}${meeting.agenda ? `&details=${encodeURIComponent(meeting.agenda)}` : ""}`;
 
   const { data: myExistingRequest } = user
     ? await supabase
@@ -237,6 +256,34 @@ export default async function MeetingPage({
             <strong>Speaker slots:</strong> {usedSlots} filled / {meeting.slots_open} open · {meeting.slot_length_minutes} min each
           </div>
         </div>
+          {isPaid && (
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-xs px-2 py-0.5 bg-yellow-100 text-yellow-800 rounded-full font-medium">Paid event</span>
+              {ticketUrl && (
+                <a href={ticketUrl} target="_blank" rel="noopener noreferrer"
+                  className="text-xs text-brand hover:underline">Buy tickets ↗</a>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-wrap gap-2 mt-3">
+          {rsvpEnabled && user && (
+            <RsvpButton meetingId={meetingId} hasRsvp={hasRsvp} count={rsvpCount} />
+          )}
+          {rsvpEnabled && !user && (
+            <p className="text-sm text-gray-500">{rsvpCount} RSVP{rsvpCount === 1 ? "" : "s"} · <Link href="/login" className="text-brand hover:underline">Sign in to RSVP</Link></p>
+          )}
+          <a href={gcalUrl} target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-lg text-sm hover:border-brand hover:text-brand transition">
+            + Google Calendar
+          </a>
+          <a href={`/api/calendar/${meetingId}`}
+            className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-lg text-sm hover:border-brand hover:text-brand transition">
+            + Apple Calendar
+          </a>
+        </div>
+
         {meeting.agenda && (
           <div className="mt-4 border-l-4 border-gray-200 pl-4">
             <h2 className="text-sm font-semibold text-gray-700 mb-1">Agenda</h2>

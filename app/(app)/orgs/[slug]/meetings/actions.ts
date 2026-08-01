@@ -45,6 +45,9 @@ export async function createMeeting(
   const rawRepeatCount = formData.get("repeat_count");
   const repeatCount = Math.min(52, Math.max(2, rawRepeatCount ? Number(rawRepeatCount) : 8));
   const cohostOrgIds = formData.getAll("cohost_org_id").map(String).filter(Boolean);
+  const isPaid = formData.get("is_paid") === "true";
+  const ticketUrl = String(formData.get("ticket_url") ?? "").trim() || null;
+  const rsvpEnabled = formData.get("rsvp_enabled") === "true";
 
   if (title.length < 2) return { ok: false, error: "Title is too short." };
   if (!startsAtStr) return { ok: false, error: "Start time is required." };
@@ -79,6 +82,9 @@ export async function createMeeting(
     slots_open: slotsOpen,
     slot_length_minutes: slotLength,
     created_by: user.id,
+    is_paid: isPaid,
+    ticket_url: isPaid ? ticketUrl : null,
+    rsvp_enabled: rsvpEnabled,
   };
 
   const isRecurring = repeatType !== "none";

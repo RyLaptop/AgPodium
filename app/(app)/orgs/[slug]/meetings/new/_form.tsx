@@ -18,6 +18,8 @@ export function NewMeetingForm({
   const [cohostIds, setCohostIds] = useState<string[]>([]);
   const [cohostSearch, setCohostSearch] = useState("");
   const [showCohostSearch, setShowCohostSearch] = useState(false);
+  const [isPaid, setIsPaid] = useState(false);
+  const [rsvpEnabled, setRsvpEnabled] = useState(false);
 
   const selectedCohosts = allOrgs.filter((o) => cohostIds.includes(o.id));
   const cohostCandidates = allOrgs.filter(
@@ -200,6 +202,42 @@ export function NewMeetingForm({
               </ul>
             )}
           </div>
+        )}
+      </div>
+
+      <div className="space-y-3 border border-gray-100 rounded-lg p-3 bg-gray-50">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            name="rsvp_enabled"
+            value="true"
+            checked={rsvpEnabled}
+            onChange={(e) => setRsvpEnabled(e.target.checked)}
+            className="rounded border-gray-300 text-brand focus:ring-brand"
+          />
+          <span className="text-sm">Enable RSVP — members can RSVP to this meeting</span>
+        </label>
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            name="is_paid"
+            value="true"
+            checked={isPaid}
+            onChange={(e) => setIsPaid(e.target.checked)}
+            className="rounded border-gray-300 text-brand focus:ring-brand"
+          />
+          <span className="text-sm">Paid event</span>
+        </label>
+        {isPaid && (
+          <label className="block">
+            <span className="text-xs text-gray-600">Ticket link (optional)</span>
+            <input
+              type="url"
+              name="ticket_url"
+              placeholder="https://..."
+              className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand text-sm"
+            />
+          </label>
         )}
       </div>
 

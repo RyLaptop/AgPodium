@@ -299,9 +299,25 @@ export default async function OrgProfilePage({
         <ActiveMembers orgId={org.id} members={activeMembersForDirector} currentUserId={user?.id} />
       )}
 
-      <div className="flex gap-4 text-sm">
+      <div className="flex flex-wrap gap-4 text-sm">
         <Link href={`/orgs/${org.slug}/gallery`} className="text-brand hover:underline font-medium">
           Gallery →
+        </Link>
+        <Link href={`/orgs/${org.slug}/surveys`} className="text-brand hover:underline font-medium">
+          Surveys →
+        </Link>
+        {isMember && (
+          <>
+            <Link href={`/orgs/${org.slug}/checklist`} className="text-brand hover:underline font-medium">
+              Checklist →
+            </Link>
+            <Link href={`/orgs/${org.slug}/awards`} className="text-brand hover:underline font-medium">
+              Awards →
+            </Link>
+          </>
+        )}
+        <Link href={`/orgs/${org.slug}/report`} className="text-brand hover:underline font-medium">
+          Report →
         </Link>
       </div>
 
