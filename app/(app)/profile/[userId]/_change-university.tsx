@@ -41,8 +41,11 @@ export function ChangeUniversitySection({ currentUni, isAdmin, switchesRemaining
             defaultValue={currentUni}
             className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand bg-white"
           >
-            <option value="tamu">Texas A&M University</option>
-            <option value="lsu">Louisiana State University</option>
+            {(Object.entries(UNIVERSITIES) as [University, typeof UNIVERSITIES[University]][])
+              .sort((a, b) => a[1].name.localeCompare(b[1].name))
+              .map(([key, uni]) => (
+                <option key={key} value={key}>{uni.name}</option>
+              ))}
           </select>
           <button
             type="submit"
