@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { UNIVERSITIES, type University } from "@/lib/university";
+import { UNIVERSITIES, type University } from "@/lib/university-data";
 
 const UNI_LIST = Object.entries(UNIVERSITIES) as [University, typeof UNIVERSITIES[University]][];
 
