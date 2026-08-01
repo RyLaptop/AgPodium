@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { promoteMember, demoteMember, removeMember, setMemberTitle } from "../actions";
+import { makeOfficer, promoteMember, demoteMember, removeMember, setMemberTitle } from "../actions";
 
 type ActiveMember = {
   user_id: string;
@@ -41,6 +41,14 @@ function MemberRow({ orgId, member, isSelf }: { orgId: string; member: ActiveMem
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleInput, setTitleInput] = useState(member.title ?? "");
   const router = useRouter();
+
+  const makeOff = () => {
+    startTransition(async () => {
+      const res = await makeOfficer(orgId, member.user_id);
+      if (!res.ok) alert(res.error);
+      else router.refresh();
+    });
+  };
 
   const promote = () => {
     startTransition(async () => {
@@ -107,15 +115,21 @@ function MemberRow({ orgId, member, isSelf }: { orgId: string; member: ActiveMem
             🏷️
           </button>
           {member.role === "officer" && (
-            <button onClick={demote} disabled={pending}
-              className="text-xs px-2.5 py-1 border border-orange-200 text-orange-600 rounded-lg hover:bg-orange-50 disabled:opacity-60">
-              Remove staff
-            </button>
+            <>
+              <button onClick={promote} disabled={pending}
+                className="text-xs px-2.5 py-1 border border-brand/30 text-brand rounded-lg hover:bg-brand/5 disabled:opacity-60">
+                Make STAFF
+              </button>
+              <button onClick={demote} disabled={pending}
+                className="text-xs px-2.5 py-1 border border-orange-200 text-orange-600 rounded-lg hover:bg-orange-50 disabled:opacity-60">
+                Remove officer
+              </button>
+            </>
           )}
           {member.role === "member" && (
-            <button onClick={promote} disabled={pending}
+            <button onClick={makeOff} disabled={pending}
               className="text-xs px-2.5 py-1 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-60">
-              Make STAFF
+              Make Officer
             </button>
           )}
           {member.role !== "director" && !isSelf && (
