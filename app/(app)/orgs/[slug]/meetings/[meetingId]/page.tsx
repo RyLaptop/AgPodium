@@ -290,7 +290,6 @@ export default async function MeetingPage({
             <p className="text-gray-700 whitespace-pre-wrap">{meeting.agenda}</p>
           </div>
         )}
-      </div>
 
       <section>
         <h2 className="text-xl font-semibold mb-3">Speaker lineup</h2>
