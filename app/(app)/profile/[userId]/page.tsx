@@ -136,7 +136,7 @@ export default async function ProfilePage({
             {memberships.map((m) => {
               const org = m.orgs as unknown as { id: string; slug: string; name: string };
               const roleLabel =
-                m.role === "director" ? "STAFF" : m.role === "officer" ? "Officer" : null;
+                m.role === "director" ? "Director" : m.role === "officer" ? "Staff" : null;
               return (
                 <li key={org.id}>
                   <Link
