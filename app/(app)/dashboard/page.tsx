@@ -4,7 +4,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { BulletinCarousel } from "./_bulletin-carousel";
 import { getUniversity, UNIVERSITIES } from "@/lib/university";
 import { AdBanner } from "@/components/ad-banner";
-import { SiteFeedbackWidget } from "./_site-feedback";
+import { SiteFeedbackWidget } from "../_site-feedback";
 
 export default async function DashboardPage() {
   const uni = await getUniversity();
