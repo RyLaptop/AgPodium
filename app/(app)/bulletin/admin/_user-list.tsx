@@ -46,11 +46,20 @@ export function UserList({ users }: { users: UserRow[] }) {
     (u) => u.last_sign_in_at && now - new Date(u.last_sign_in_at).getTime() < MAU_MS
   ).length;
 
-  const filtered = users.filter((u) => {
-    if (mauOnly && !(u.last_sign_in_at && now - new Date(u.last_sign_in_at).getTime() < MAU_MS)) return false;
-    if (q && !u.email.toLowerCase().includes(q.toLowerCase()) && !(u.full_name ?? "").toLowerCase().includes(q.toLowerCase())) return false;
-    return true;
-  });
+  const filtered = users
+    .filter((u) => {
+      if (mauOnly && !(u.last_sign_in_at && now - new Date(u.last_sign_in_at).getTime() < MAU_MS)) return false;
+      if (q && !u.email.toLowerCase().includes(q.toLowerCase()) && !(u.full_name ?? "").toLowerCase().includes(q.toLowerCase())) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      const aIsMau = !!(a.last_sign_in_at && now - new Date(a.last_sign_in_at).getTime() < MAU_MS);
+      const bIsMau = !!(b.last_sign_in_at && now - new Date(b.last_sign_in_at).getTime() < MAU_MS);
+      if (aIsMau !== bIsMau) return aIsMau ? -1 : 1;
+      const aTs = a.last_sign_in_at ? new Date(a.last_sign_in_at).getTime() : 0;
+      const bTs = b.last_sign_in_at ? new Date(b.last_sign_in_at).getTime() : 0;
+      return bTs - aTs;
+    });
 
   const handleSave = () => {
     if (!editing || !formRef.current) return;

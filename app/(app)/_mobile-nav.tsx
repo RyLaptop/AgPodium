@@ -137,6 +137,13 @@ export function MobileNav({
                 >
                   Create account
                 </Link>
+                <Link
+                  href="/?switch=1"
+                  onClick={close}
+                  className="block w-full px-4 py-2.5 text-xs text-center text-gray-400 hover:text-brand transition"
+                >
+                  Switch campus
+                </Link>
               </>
             )}
           </div>

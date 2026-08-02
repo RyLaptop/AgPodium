@@ -2,9 +2,14 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { UniSelector } from "./_uni-selector";
 
-export default async function HomePage() {
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ switch?: string }>;
+}) {
   const jar = await cookies();
-  if (jar.get("uni")?.value) redirect("/dashboard");
+  const { switch: sw } = await searchParams;
+  if (jar.get("uni")?.value && !sw) redirect("/dashboard");
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 px-4">
