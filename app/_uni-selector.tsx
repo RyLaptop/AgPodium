@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { UNIVERSITIES, type University } from "@/lib/university-data";
 
 const UNI_LIST = Object.entries(UNIVERSITIES) as [University, typeof UNIVERSITIES[University]][];
 
-export function UniSelector() {
-  const [selected, setSelected] = useState<University | null>(null);
+export function UniSelector({ currentUni }: { currentUni: University | null }) {
+  const [selected, setSelected] = useState<University | null>(currentUni);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -74,8 +75,23 @@ export function UniSelector() {
         disabled={!selected || loading}
         className="w-full py-3 bg-blue-500 text-white rounded-xl text-sm font-semibold hover:bg-blue-600 disabled:opacity-40 transition"
       >
-        {loading ? "Loading…" : selected ? `Continue as ${UNIVERSITIES[selected].label} →` : "Select a university to continue"}
+        {loading ? "Loading…" : selected ? `Browse as ${UNIVERSITIES[selected].label} →` : "Select a university to continue"}
       </button>
+
+      <div className="flex gap-3 pt-1">
+        <Link
+          href="/login"
+          className="flex-1 py-2.5 border border-gray-300 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-100 transition text-center"
+        >
+          Sign in
+        </Link>
+        <Link
+          href="/login?mode=signup"
+          className="flex-1 py-2.5 bg-gray-900 text-white rounded-xl text-sm font-medium hover:bg-gray-800 transition text-center"
+        >
+          Sign up
+        </Link>
+      </div>
     </form>
   );
 }

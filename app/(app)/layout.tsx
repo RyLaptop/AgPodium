@@ -131,12 +131,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               ) : (
                 <div className="hidden md:flex items-center gap-2">
                   <Link
-                    href="/?switch=1"
-                    className="text-xs text-gray-400 hover:text-brand transition"
-                  >
-                    Switch campus
-                  </Link>
-                  <Link
                     href="/login"
                     className="text-sm px-3 py-1.5 text-gray-600 hover:text-brand transition"
                   >

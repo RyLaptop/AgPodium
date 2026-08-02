@@ -1,15 +1,18 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
 import { UniSelector } from "./_uni-selector";
+import type { University } from "@/lib/university-data";
 
-export default async function HomePage({
-  searchParams,
-}: {
-  searchParams: Promise<{ switch?: string }>;
-}) {
+export default async function HomePage() {
   const jar = await cookies();
-  const { switch: sw } = await searchParams;
-  if (jar.get("uni")?.value && !sw) redirect("/dashboard");
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  // Signed-in users skip the selector and go straight to the app
+  if (user && jar.get("uni")?.value) redirect("/dashboard");
+
+  const currentUni = (jar.get("uni")?.value ?? null) as University | null;
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 px-4">
@@ -33,12 +36,8 @@ export default async function HomePage({
           </div>
         </div>
 
-        {/* Selector */}
-        <UniSelector />
+        <UniSelector currentUni={currentUni} />
 
-        <p className="text-xs text-gray-400 pb-2">
-          Your university selection is saved for future visits.
-        </p>
       </div>
     </div>
   );
