@@ -24,13 +24,11 @@ export function MatchQuiz({ booths, onResults, onClose }: Props) {
       setScores(newScores);
       setStep((s) => s + 1);
     } else {
-      // Rank categories, filter booths by top categories
       const ranked = Object.entries(newScores).sort((a, b) => b[1] - a[1]);
       const topCats = new Set(ranked.slice(0, 3).map(([c]) => c));
-      const matched = booths
-        .filter((b) => b.category && topCats.has(b.category))
-        .concat(booths.filter((b) => !b.category || !topCats.has(b.category)));
-      onResults(matched);
+      const matched = booths.filter((b) => b.category && topCats.has(b.category));
+      // Fall back to all booths if nothing matches (e.g. no booths in those categories yet)
+      onResults(matched.length > 0 ? matched : booths);
     }
   };
 

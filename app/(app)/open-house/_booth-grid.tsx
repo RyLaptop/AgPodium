@@ -18,8 +18,8 @@ export function BoothGrid({ booths, stamps, totalEntries }: Props) {
   const [quizOpen, setQuizOpen] = useState(false);
   const [quizResults, setQuizResults] = useState<BoothRow[] | null>(null);
   const [passportOpen, setPassportOpen] = useState(false);
+  const [previewBooth, setPreviewBooth] = useState<BoothRow | null>(null);
 
-  const stampMap = new Map(stamps.map((s) => [s.org_id, s]));
   const stampedOrgIds = new Set(stamps.map((s) => s.org_id));
 
   const displayed = (quizResults ?? booths).filter((b) =>
@@ -32,10 +32,72 @@ export function BoothGrid({ booths, stamps, totalEntries }: Props) {
     setFilter("all");
   };
 
+  const handleBoothClick = (booth: BoothRow, e: React.MouseEvent) => {
+    if (booth.isFake) {
+      e.preventDefault();
+      setPreviewBooth(booth);
+    }
+  };
+
   return (
     <>
       {quizOpen && (
         <MatchQuiz booths={booths} onResults={handleQuizResults} onClose={() => setQuizOpen(false)} />
+      )}
+
+      {/* Fake booth preview modal (admin test mode only) */}
+      {previewBooth && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 space-y-4 max-h-[85vh] overflow-y-auto">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-3">
+                <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0"
+                  style={{ backgroundColor: CATEGORY_COLOR[previewBooth.category ?? "Other"] ?? "#6B7280" }}>
+                  {previewBooth.org_name.slice(0, 2).toUpperCase()}
+                </div>
+                <div>
+                  {previewBooth.category && (
+                    <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full text-white"
+                      style={{ backgroundColor: CATEGORY_COLOR[previewBooth.category] ?? "#6B7280" }}>
+                      {previewBooth.category}
+                    </span>
+                  )}
+                  <h2 className="text-lg font-bold mt-1">{previewBooth.org_name}</h2>
+                  <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">🔧 Test booth</span>
+                </div>
+              </div>
+              <button onClick={() => setPreviewBooth(null)} className="text-gray-400 hover:text-gray-600 text-xl shrink-0">✕</button>
+            </div>
+
+            {previewBooth.elevator_pitch && (
+              <p className="text-sm text-gray-700 leading-relaxed">{previewBooth.elevator_pitch}</p>
+            )}
+
+            <div className="flex gap-3 text-xs text-gray-400">
+              <span>📹 Video stamp</span>
+              <span>🔗 Link stamp</span>
+              <span>📅 Event stamp</span>
+            </div>
+
+            {(previewBooth.website_url || previewBooth.instagram_url || previewBooth.tiktok_url) && (
+              <div className="flex flex-wrap gap-2">
+                {previewBooth.website_url && (
+                  <span className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-500">Website ↗</span>
+                )}
+                {previewBooth.instagram_url && (
+                  <span className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-500">Instagram ↗</span>
+                )}
+                {previewBooth.tiktok_url && (
+                  <span className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-500">TikTok ↗</span>
+                )}
+              </div>
+            )}
+
+            <p className="text-xs text-gray-400 text-center pt-2 border-t border-gray-100">
+              This is a preview of a test booth. Real booths will have images, videos, and active links.
+            </p>
+          </div>
+        </div>
       )}
 
       {/* Passport overlay */}
@@ -67,6 +129,7 @@ export function BoothGrid({ booths, stamps, totalEntries }: Props) {
                       <div className="w-16 h-16 rounded-full flex items-center justify-center text-white text-xs font-bold text-center leading-tight p-1"
                         style={{ backgroundColor: color }}>
                         {booth.org_logo_url
+                          /* eslint-disable-next-line @next/next/no-img-element */
                           ? <img src={booth.org_logo_url} alt="" className="w-full h-full rounded-full object-cover" />
                           : booth.org_name.slice(0, 2).toUpperCase()}
                       </div>
@@ -92,7 +155,7 @@ export function BoothGrid({ booths, stamps, totalEntries }: Props) {
           </button>
           {BOOTH_CATEGORIES.map((cat) => (
             <button key={cat} onClick={() => { setFilter(cat); setQuizResults(null); }}
-              className={`px-3 py-1.5 rounded-full text-sm font-medium border transition ${filter === cat ? "bg-brand text-white border-brand" : "border-gray-300 text-gray-600 hover:bg-gray-50"}`}>
+              className={`px-3 py-1.5 rounded-full text-sm font-medium border transition ${filter === cat && !quizResults ? "bg-brand text-white border-brand" : "border-gray-300 text-gray-600 hover:bg-gray-50"}`}>
               {cat}
             </button>
           ))}
@@ -119,7 +182,8 @@ export function BoothGrid({ booths, stamps, totalEntries }: Props) {
 
       {quizResults && (
         <div className="bg-brand/5 border border-brand/20 rounded-xl px-4 py-2 text-sm text-brand">
-          ✨ Showing your best matches. <button onClick={() => setQuizResults(null)} className="underline">See all orgs</button>
+          ✨ Showing {quizResults.length} best {quizResults.length === 1 ? "match" : "matches"}.{" "}
+          <button onClick={() => setQuizResults(null)} className="underline">See all orgs</button>
         </div>
       )}
 
@@ -135,7 +199,8 @@ export function BoothGrid({ booths, stamps, totalEntries }: Props) {
               <Link
                 key={booth.id}
                 href={booth.isFake ? "#" : `/open-house/${booth.org_slug}`}
-                className="block border border-gray-200 rounded-2xl overflow-hidden hover:shadow-md hover:border-brand/30 transition group"
+                onClick={(e) => handleBoothClick(booth, e)}
+                className="block border border-gray-200 rounded-2xl overflow-hidden hover:shadow-md hover:border-brand/30 transition group cursor-pointer"
               >
                 {/* Cover */}
                 <div className="relative h-36 w-full flex items-center justify-center"
