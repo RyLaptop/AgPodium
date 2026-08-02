@@ -10,6 +10,7 @@ import { TestEmailButton } from "./_test-email";
 import { FeaturedOrgPicker } from "./_featured-org";
 import { AdAnalytics } from "./_ad-analytics";
 import { UserAnalytics } from "./_user-analytics";
+import { OpenHouseToggle } from "./_open-house-toggle";
 import { getUniversity, UNIVERSITIES } from "@/lib/university";
 
 export const dynamic = "force-dynamic";
@@ -53,6 +54,7 @@ export default async function BulletinAdminPage({
     { data: approvedOrgs },
     { data: adClicks },
     authUsersResult,
+    { data: openHouseSettings },
   ] = await Promise.all([
     admin.from("bulletin_posts")
       .select("id, event_title, event_description, event_at, event_location, created_at, users!bulletin_posts_submitter_id_fkey(full_name, email), orgs(name)")
@@ -65,16 +67,17 @@ export default async function BulletinAdminPage({
       .eq("university", uni)
       .order("created_at", { ascending: true }),
     isCampus
-      ? admin.from("users").select(userSelect).eq("university", uni).order("created_at", { ascending: false })
+      ? admin.from("users").select(userSelect).or(`university.eq.${uni},university.is.null`).order("created_at", { ascending: false })
       : admin.from("users").select(userSelect).order("created_at", { ascending: false }),
     isCampus
-      ? admin.from("users").select("id, email, full_name, created_at").eq("is_verified", false).eq("is_site_admin", false).eq("university", uni).order("created_at", { ascending: true })
+      ? admin.from("users").select("id, email, full_name, created_at").eq("is_verified", false).eq("is_site_admin", false).or(`university.eq.${uni},university.is.null`).order("created_at", { ascending: true })
       : admin.from("users").select("id, email, full_name, created_at").eq("is_verified", false).eq("is_site_admin", false).order("created_at", { ascending: true }),
     isCampus
       ? admin.from("orgs").select("id, name, is_featured").eq("status", "approved").eq("university", uni).order("name")
       : admin.from("orgs").select("id, name, is_featured").eq("status", "approved").order("name"),
     admin.from("ad_clicks").select("tier, variant"),
     admin.auth.admin.listUsers({ perPage: 1000 }),
+    admin.from("open_house_settings").select("is_active, is_test_mode").eq("university", uni).maybeSingle(),
   ]);
 
   const lastSignInMap = new Map(
@@ -141,6 +144,15 @@ export default async function BulletinAdminPage({
       <section>
         <h2 className="text-xl font-semibold mb-3">Ad analytics</h2>
         <AdAnalytics clicks={adClicks ?? []} />
+      </section>
+
+      <section>
+        <h2 className="text-xl font-semibold mb-3">Podium Open House</h2>
+        <OpenHouseToggle
+          university={uni}
+          isActive={openHouseSettings?.is_active ?? false}
+          isTestMode={openHouseSettings?.is_test_mode ?? false}
+        />
       </section>
 
       <section>

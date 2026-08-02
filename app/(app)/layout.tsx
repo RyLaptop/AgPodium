@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { signOut } from "@/app/auth/actions";
 import { NotificationBell, type Notification } from "./_notification-bell";
 import { UserAvatar } from "@/components/user-avatar";
@@ -13,6 +14,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const uni = await getUniversity();
   const uniInfo = UNIVERSITIES[uni];
   const supabase = await createClient();
+  const svc = createServiceClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -53,6 +55,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const notifications = notifRows as Notification[];
   const isAdmin = (profile as { is_site_admin?: boolean } | null)?.is_site_admin ?? false;
 
+  const { data: ohSettings } = await svc.from("open_house_settings")
+    .select("is_active, is_test_mode")
+    .eq("university", uni)
+    .maybeSingle();
+  const showOpenHouse = ohSettings?.is_active || (isAdmin && !!ohSettings?.is_test_mode);
+
   const navLinks = [
     { href: "/dashboard", label: "Dashboard" },
     { href: "/orgs", label: "Orgs" },
@@ -61,6 +69,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     { href: "/messages", label: "Messages", requiresAuth: true },
     { href: "/map", label: "Map" },
     { href: "/calendar", label: "Calendar" },
+    ...(showOpenHouse ? [{ href: "/open-house", label: "🎪 Open House" }] : []),
   ];
 
   return (
