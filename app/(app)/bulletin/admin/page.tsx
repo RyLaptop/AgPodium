@@ -43,19 +43,6 @@ export default async function BulletinAdminPage({
   const uniInfo = UNIVERSITIES[uni];
   const admin = createServiceClient();
 
-  // In campus mode, resolve which user IDs belong to this university's orgs
-  let campusUserIds: string[] | null = null;
-  if (isCampus) {
-    const { data: uniOrgs } = await admin.from("orgs").select("id").eq("university", uni);
-    const orgIds = (uniOrgs ?? []).map((o) => o.id);
-    if (orgIds.length > 0) {
-      const { data: members } = await admin.from("org_members").select("user_id").in("org_id", orgIds);
-      campusUserIds = [...new Set((members ?? []).map((m) => m.user_id as string))];
-    } else {
-      campusUserIds = [];
-    }
-  }
-
   const userSelect = "id, email, full_name, avatar_url, is_site_admin, is_verified, created_at";
 
   const [
@@ -77,15 +64,11 @@ export default async function BulletinAdminPage({
       .eq("status", "pending")
       .eq("university", uni)
       .order("created_at", { ascending: true }),
-    campusUserIds !== null
-      ? campusUserIds.length > 0
-        ? admin.from("users").select(userSelect).in("id", campusUserIds).order("created_at", { ascending: false })
-        : Promise.resolve({ data: [] as never[] })
+    isCampus
+      ? admin.from("users").select(userSelect).eq("university", uni).order("created_at", { ascending: false })
       : admin.from("users").select(userSelect).order("created_at", { ascending: false }),
-    campusUserIds !== null
-      ? campusUserIds.length > 0
-        ? admin.from("users").select("id, email, full_name, created_at").eq("is_verified", false).eq("is_site_admin", false).in("id", campusUserIds).order("created_at", { ascending: true })
-        : Promise.resolve({ data: [] as never[] })
+    isCampus
+      ? admin.from("users").select("id, email, full_name, created_at").eq("is_verified", false).eq("is_site_admin", false).eq("university", uni).order("created_at", { ascending: true })
       : admin.from("users").select("id, email, full_name, created_at").eq("is_verified", false).eq("is_site_admin", false).order("created_at", { ascending: true }),
     isCampus
       ? admin.from("orgs").select("id, name, is_featured").eq("status", "approved").eq("university", uni).order("name")

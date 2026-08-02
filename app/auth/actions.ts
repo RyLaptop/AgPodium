@@ -87,7 +87,7 @@ export async function signUpWithPassword(
   // steps are needed before the user can access the app.
   const svc = createServiceClient();
   await svc.auth.admin.updateUserById(data.user.id, { email_confirm: true });
-  await svc.from("users").update({ is_verified: true }).eq("id", data.user.id);
+  await svc.from("users").update({ is_verified: true, university }).eq("id", data.user.id);
 
   const jar = await cookies();
   jar.set("uni", university, { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax" });

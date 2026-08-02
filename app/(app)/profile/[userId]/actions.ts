@@ -3,6 +3,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { UNIVERSITIES } from "@/lib/university-data";
 import type { University } from "@/lib/university";
 
@@ -42,5 +43,10 @@ export async function changeUniversity(formData: FormData) {
   }
 
   jar.set("uni", newUni, cookieOpts);
+
+  // Keep the users table in sync so admin filtering by campus works
+  const svc = createServiceClient();
+  await svc.from("users").update({ university: newUni }).eq("id", user.id);
+
   redirect("/dashboard");
 }
