@@ -5,7 +5,10 @@ import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { isEmailAllowed } from "@/lib/auth/allowed-domains";
+import { UNIVERSITIES } from "@/lib/university-data";
 import type { University } from "@/lib/university";
+
+const VALID_UNI_KEYS = Object.keys(UNIVERSITIES) as University[];
 
 export type SignInResult =
   | { ok: true; email: string; pendingApproval?: boolean }
@@ -49,7 +52,7 @@ export async function signUpWithPassword(
   if (!name) {
     return { ok: false, error: "Enter a display name." };
   }
-  if (university !== "tamu" && university !== "lsu") {
+  if (!VALID_UNI_KEYS.includes(university)) {
     return { ok: false, error: "Select your university." };
   }
   if (!isEmailAllowed(email)) {
@@ -71,7 +74,10 @@ export async function signUpWithPassword(
   });
 
   if (error) {
-    return { ok: false, error: error.message };
+    const msg = error.message && error.message.trim() && !error.message.startsWith("{")
+      ? error.message
+      : "Account creation failed. If you recently had an account deleted, wait a few minutes and try again.";
+    return { ok: false, error: msg };
   }
   if (!data.user) {
     return { ok: false, error: "Signup failed." };
