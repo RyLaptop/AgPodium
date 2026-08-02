@@ -140,7 +140,14 @@ export async function leaveOrg(orgId: string) {
 
 export async function approveMember(orgId: string, userId: string) {
   const supabase = await createClient();
-  const { error } = await supabase
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not signed in" };
+  if (!await isDirectorOrAdmin(supabase, orgId, user.id)) {
+    return { ok: false as const, error: "Only directors can approve members." };
+  }
+
+  const svc = createServiceClient();
+  const { error } = await svc
     .from("org_members")
     .update({ status: "active" })
     .eq("org_id", orgId)
@@ -149,7 +156,7 @@ export async function approveMember(orgId: string, userId: string) {
 
   if (error) return { ok: false as const, error: error.message };
 
-  const { data: org } = await supabase.from("orgs").select("name, slug").eq("id", orgId).single();
+  const { data: org } = await svc.from("orgs").select("name, slug").eq("id", orgId).single();
   if (org) {
     await notify([{ userId, type: "org_member_request", title: `You're now a member of ${org.name}!`, link: `/orgs/${org.slug}` }]);
   }
@@ -160,10 +167,16 @@ export async function approveMember(orgId: string, userId: string) {
 
 export async function denyMember(orgId: string, userId: string) {
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, error: "Not signed in" };
+  if (!await isDirectorOrAdmin(supabase, orgId, user.id)) {
+    return { ok: false as const, error: "Only directors can deny members." };
+  }
 
-  const { data: org } = await supabase.from("orgs").select("name").eq("id", orgId).single();
+  const svc = createServiceClient();
+  const { data: org } = await svc.from("orgs").select("name").eq("id", orgId).single();
 
-  const { error } = await supabase
+  const { error } = await svc
     .from("org_members")
     .delete()
     .eq("org_id", orgId)
