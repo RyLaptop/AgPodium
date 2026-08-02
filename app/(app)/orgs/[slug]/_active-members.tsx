@@ -108,7 +108,7 @@ function MemberRow({ orgId, member, isSelf }: { orgId: string; member: ActiveMem
 
   return (
     <li className="border border-gray-200 rounded-lg px-4 py-3 space-y-2">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <Link href={`/profile/${member.user_id}`} className="font-medium hover:text-brand hover:underline">
             {member.full_name ?? member.email.split("@")[0]}
@@ -118,7 +118,7 @@ function MemberRow({ orgId, member, isSelf }: { orgId: string; member: ActiveMem
           )}
           <p className="text-xs text-gray-500">{member.email}</p>
         </div>
-        <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+        <div className="flex items-center gap-2 flex-wrap sm:shrink-0 sm:justify-end">
           <span className={`text-xs px-2 py-0.5 rounded ${
             member.role === "director" ? "bg-brand/10 text-brand-dark font-medium"
             : member.role === "officer" ? "bg-gray-100 text-gray-600"
