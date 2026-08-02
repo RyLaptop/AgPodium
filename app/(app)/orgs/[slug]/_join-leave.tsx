@@ -41,7 +41,7 @@ export function JoinLeaveButton({
   };
 
   if (isDirector) {
-    const canStepDown = myRole === "director";
+    const canStepDown = myRole === "director" || myRole === "officer";
     return (
       <div className="flex items-center gap-2 flex-wrap">
         <span className="text-sm px-3 py-1.5 bg-brand/10 text-brand-dark font-medium rounded-lg">
@@ -70,7 +70,7 @@ export function JoinLeaveButton({
   if (isMember && myRole === "officer") {
     return (
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-xs px-2.5 py-1 bg-gray-100 text-gray-600 rounded-lg">Officer</span>
+        <span className="text-xs px-2.5 py-1 bg-gray-100 text-gray-600 rounded-lg">Staff</span>
         <button
           onClick={handleStepDown}
           disabled={pending}
