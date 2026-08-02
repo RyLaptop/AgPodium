@@ -4,6 +4,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { BulletinCarousel } from "./_bulletin-carousel";
 import { getUniversity, UNIVERSITIES } from "@/lib/university";
 import { AdBanner } from "@/components/ad-banner";
+import { SiteFeedbackWidget } from "./_site-feedback";
 
 export default async function DashboardPage() {
   const uni = await getUniversity();
@@ -197,6 +198,8 @@ export default async function DashboardPage() {
           <p className="text-sm text-gray-500 mt-1">Meetings near you</p>
         </Link>
       </section>
+      <SiteFeedbackWidget />
+
       <p className="text-xs text-gray-400 text-center pt-4 border-t border-gray-100">
         UniPodium is a student-run platform and is not affiliated with, endorsed by, or associated with {uniInfo.name} in any way.
       </p>

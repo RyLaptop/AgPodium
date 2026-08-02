@@ -19,8 +19,10 @@ export function JoinRequestActions({ orgId, userId }: { orgId: string; userId: s
 
   const act = (approve: boolean) => {
     startTransition(async () => {
-      if (approve) await approveMember(orgId, userId);
-      else await denyMember(orgId, userId);
+      const res = approve
+        ? await approveMember(orgId, userId)
+        : await denyMember(orgId, userId);
+      if (!res.ok) { alert(res.error); return; }
       setDone(approve ? "approved" : "denied");
       router.refresh();
     });

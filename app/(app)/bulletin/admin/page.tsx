@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -9,11 +10,15 @@ import { TestEmailButton } from "./_test-email";
 import { FeaturedOrgPicker } from "./_featured-org";
 import { AdAnalytics } from "./_ad-analytics";
 import { UserAnalytics } from "./_user-analytics";
-import { getUniversity } from "@/lib/university";
+import { getUniversity, UNIVERSITIES } from "@/lib/university";
 
 export const dynamic = "force-dynamic";
 
-export default async function BulletinAdminPage() {
+export default async function BulletinAdminPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ scope?: string }>;
+}) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
@@ -32,8 +37,27 @@ export default async function BulletinAdminPage() {
     );
   }
 
+  const { scope = "campus" } = await searchParams;
+  const isCampus = scope !== "site";
   const uni = await getUniversity();
+  const uniInfo = UNIVERSITIES[uni];
   const admin = createServiceClient();
+
+  // In campus mode, resolve which user IDs belong to this university's orgs
+  let campusUserIds: string[] | null = null;
+  if (isCampus) {
+    const { data: uniOrgs } = await admin.from("orgs").select("id").eq("university", uni);
+    const orgIds = (uniOrgs ?? []).map((o) => o.id);
+    if (orgIds.length > 0) {
+      const { data: members } = await admin.from("org_members").select("user_id").in("org_id", orgIds);
+      campusUserIds = [...new Set((members ?? []).map((m) => m.user_id as string))];
+    } else {
+      campusUserIds = [];
+    }
+  }
+
+  const userSelect = "id, email, full_name, avatar_url, is_site_admin, is_verified, created_at";
+
   const [
     { data: pendingPosts },
     { data: pendingOrgs },
@@ -53,18 +77,19 @@ export default async function BulletinAdminPage() {
       .eq("status", "pending")
       .eq("university", uni)
       .order("created_at", { ascending: true }),
-    admin.from("users")
-      .select("id, email, full_name, avatar_url, is_site_admin, is_verified, created_at")
-      .order("created_at", { ascending: false }),
-    admin.from("users")
-      .select("id, email, full_name, created_at")
-      .eq("is_verified", false)
-      .eq("is_site_admin", false)
-      .order("created_at", { ascending: true }),
-    admin.from("orgs")
-      .select("id, name, is_featured")
-      .eq("status", "approved")
-      .order("name"),
+    campusUserIds !== null
+      ? campusUserIds.length > 0
+        ? admin.from("users").select(userSelect).in("id", campusUserIds).order("created_at", { ascending: false })
+        : Promise.resolve({ data: [] as never[] })
+      : admin.from("users").select(userSelect).order("created_at", { ascending: false }),
+    campusUserIds !== null
+      ? campusUserIds.length > 0
+        ? admin.from("users").select("id, email, full_name, created_at").eq("is_verified", false).eq("is_site_admin", false).in("id", campusUserIds).order("created_at", { ascending: true })
+        : Promise.resolve({ data: [] as never[] })
+      : admin.from("users").select("id, email, full_name, created_at").eq("is_verified", false).eq("is_site_admin", false).order("created_at", { ascending: true }),
+    isCampus
+      ? admin.from("orgs").select("id, name, is_featured").eq("status", "approved").eq("university", uni).order("name")
+      : admin.from("orgs").select("id, name, is_featured").eq("status", "approved").order("name"),
     admin.from("ad_clicks").select("tier, variant"),
     admin.auth.admin.listUsers({ perPage: 1000 }),
   ]);
@@ -105,7 +130,23 @@ export default async function BulletinAdminPage() {
   return (
     <div className="space-y-8">
       <div className="flex items-start justify-between gap-4 flex-wrap">
-        <h1 className="text-3xl font-bold">Admin</h1>
+        <div>
+          <h1 className="text-3xl font-bold">Admin</h1>
+          <div className="flex items-center gap-1 mt-2 text-sm">
+            <Link
+              href="?scope=campus"
+              className={`px-3 py-1 rounded-full border transition ${isCampus ? "bg-brand text-white border-brand" : "border-gray-300 text-gray-600 hover:bg-gray-50"}`}
+            >
+              {uniInfo.label}
+            </Link>
+            <Link
+              href="?scope=site"
+              className={`px-3 py-1 rounded-full border transition ${!isCampus ? "bg-brand text-white border-brand" : "border-gray-300 text-gray-600 hover:bg-gray-50"}`}
+            >
+              Site-wide
+            </Link>
+          </div>
+        </div>
         <TestEmailButton />
       </div>
 

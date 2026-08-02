@@ -35,7 +35,7 @@ export function FeaturedOrgPicker({
       ) : (
         <p className="text-sm text-gray-400">No org currently featured.</p>
       )}
-      <div className="flex gap-2">
+      <div className="flex flex-col sm:flex-row gap-2">
         <select
           value={selectedId}
           onChange={(e) => setSelectedId(e.target.value)}
