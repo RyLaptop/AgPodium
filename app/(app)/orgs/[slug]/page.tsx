@@ -285,10 +285,11 @@ export default async function OrgProfilePage({
             </Link>
           </>
         )}
-        <Link href={`/orgs/${org.slug}/report`}
+        <a href="https://stuactonline.tamu.edu/online/forms/incident_reporting/index"
+          target="_blank" rel="noopener noreferrer"
           className="px-4 py-2 rounded-lg border border-gray-200 bg-white hover:bg-brand hover:text-white hover:border-brand text-sm font-medium transition-colors">
           Anonymous Report
-        </Link>
+        </a>
       </div>
 
       <Affiliations
