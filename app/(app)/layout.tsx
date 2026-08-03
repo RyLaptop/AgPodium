@@ -69,14 +69,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     { href: "/messages", label: "Messages", requiresAuth: true },
     { href: "/map", label: "Map" },
     { href: "/calendar", label: "Calendar" },
-    ...(showOpenHouse ? [{ href: "/open-house", label: "🎪 Open House" }] : []),
+    ...(showOpenHouse ? [{ href: "/open-house", label: "Open House" }] : []),
   ];
 
   return (
     <AuthGateProvider isAuthed={!!user}>
       <div className="min-h-screen flex flex-col">
         <header className="border-b border-gray-100 bg-white sticky top-0 z-40">
-          <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
+          <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between overflow-hidden">
             <Link href="/dashboard" className="flex items-center gap-2 shrink-0">
               <svg width="26" height="26" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" style={{ color: "rgb(var(--color-brand))" }}>
                 <circle cx="40" cy="10" r="4.5" fill="currentColor"/>
